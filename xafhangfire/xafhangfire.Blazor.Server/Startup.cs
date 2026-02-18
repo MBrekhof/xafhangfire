@@ -221,21 +221,10 @@ namespace xafhangfire.Blazor.Server
                 .UseInMemoryStorage());
             services.AddHangfireServer();
 
-            // Job handlers
-            services.AddTransient<IJobHandler<DemoLogCommand>, DemoLogHandler>();
-            services.AddTransient<IJobHandler<ListUsersCommand>, ListUsersHandler>();
-            services.AddTransient<JobExecutor<DemoLogCommand>>();
-            services.AddTransient<JobExecutor<ListUsersCommand>>();
-
-            // Job dispatcher — toggled by config
-            if (Configuration.GetValue<bool>("Jobs:UseHangfire"))
-            {
-                services.AddSingleton<IJobDispatcher, HangfireJobDispatcher>();
-            }
-            else
-            {
-                services.AddSingleton<IJobDispatcher, DirectJobDispatcher>();
-            }
+            // Job dispatcher + handlers
+            services.AddJobDispatcher(Configuration);
+            services.AddJobHandler<DemoLogCommand, DemoLogHandler>();
+            services.AddJobHandler<ListUsersCommand, ListUsersHandler>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
