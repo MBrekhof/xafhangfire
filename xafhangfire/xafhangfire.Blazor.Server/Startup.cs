@@ -76,6 +76,7 @@ namespace xafhangfire.Blazor.Server
                         options.AllowValidationDetailsAccess = false;
                     })
                     .AddViewVariants()
+                    .AddScheduler()
                     .Add<xafhangfire.Module.xafhangfireModule>()
                     .Add<xafhangfireBlazorModule>();
                 builder.ObjectSpaceProviders
