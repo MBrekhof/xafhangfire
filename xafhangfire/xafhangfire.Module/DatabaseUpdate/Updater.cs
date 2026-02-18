@@ -66,6 +66,9 @@ namespace xafhangfire.Module.DatabaseUpdate
             }
 
             ObjectSpace.CommitChanges(); //This line persists created object(s).
+
+            SeedJobDefinitions();
+            ObjectSpace.CommitChanges();
 #endif
         }
         public override void UpdateDatabaseBeforeUpdateSchema()
@@ -82,6 +85,36 @@ namespace xafhangfire.Module.DatabaseUpdate
                 adminRole.IsAdministrative = true;
             }
             return adminRole;
+        }
+        void SeedJobDefinitions()
+        {
+            if (ObjectSpace.FirstOrDefault<JobDefinition>(j => j.Name == "Demo Log Job") == null)
+            {
+                var demoJob = ObjectSpace.CreateObject<JobDefinition>();
+                demoJob.Name = "Demo Log Job";
+                demoJob.JobTypeName = "DemoLogCommand";
+                demoJob.ParametersJson = "{\"Message\":\"Hello from seed data\",\"DelaySeconds\":2}";
+                demoJob.IsEnabled = true;
+            }
+
+            if (ObjectSpace.FirstOrDefault<JobDefinition>(j => j.Name == "List Users Job") == null)
+            {
+                var listJob = ObjectSpace.CreateObject<JobDefinition>();
+                listJob.Name = "List Users Job";
+                listJob.JobTypeName = "ListUsersCommand";
+                listJob.ParametersJson = "{\"MaxResults\":5}";
+                listJob.IsEnabled = true;
+            }
+
+            if (ObjectSpace.FirstOrDefault<JobDefinition>(j => j.Name == "Scheduled Demo (Every 5 Min)") == null)
+            {
+                var scheduledJob = ObjectSpace.CreateObject<JobDefinition>();
+                scheduledJob.Name = "Scheduled Demo (Every 5 Min)";
+                scheduledJob.JobTypeName = "DemoLogCommand";
+                scheduledJob.ParametersJson = "{\"Message\":\"Scheduled run\",\"DelaySeconds\":1}";
+                scheduledJob.CronExpression = "*/5 * * * *";
+                scheduledJob.IsEnabled = true;
+            }
         }
         PermissionPolicyRole CreateDefaultRole()
         {
