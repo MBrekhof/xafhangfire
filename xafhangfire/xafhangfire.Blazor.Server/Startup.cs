@@ -227,6 +227,7 @@ namespace xafhangfire.Blazor.Server
             services.AddJobHandler<DemoLogCommand, DemoLogHandler>();
             services.AddJobHandler<ListUsersCommand, ListUsersHandler>();
             services.AddTransient<JobDispatchService>();
+            services.AddHostedService<JobSyncService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
