@@ -45,6 +45,9 @@
       <PrivateAssets>none</PrivateAssets>
       <IncludeAssets>all</IncludeAssets>
     </PackageReference>
-    
+
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\xafhangfire.Jobs\xafhangfire.Jobs.csproj" />
   </ItemGroup>
 </Project>
