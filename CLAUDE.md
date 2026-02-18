@@ -30,7 +30,8 @@ This is a **DevExpress XAF (eXpressApp Framework)** application using **EF Core*
 ### Project Structure
 
 - **xafhangfire.Module** — Shared business logic layer. All business objects, DbContext, database migration (Updater), and XAF module configuration live here. Both UI projects reference this.
-- **xafhangfire.Blazor.Server** — Web UI (Blazor Server). Also hosts Web API endpoints (JWT auth, OData, reports) and Swagger.
+- **xafhangfire.Jobs** — Job dispatcher abstractions, command records, handlers, and utilities. No XAF UI dependency. Referenced by Blazor.Server.
+- **xafhangfire.Blazor.Server** — Web UI (Blazor Server). Also hosts Web API endpoints (JWT auth, OData, reports), Swagger, and Hangfire dashboard.
 - **xafhangfire.Win** — Desktop UI (WinForms).
 
 ### Key Files
@@ -41,7 +42,13 @@ This is a **DevExpress XAF (eXpressApp Framework)** application using **EF Core*
 | `Module/Module.cs` | XAF module registration — add `AdditionalExportedTypes` for new business objects |
 | `Module/DatabaseUpdate/Updater.cs` | Seed data and schema migrations — creates default users/roles in non-Release builds |
 | `Blazor.Server/Startup.cs` | DI registration, XAF module pipeline, auth config, OData/Swagger setup |
-| `Blazor.Server/API/` | Web API controllers (AuthenticationController, ReportController) |
+| `Blazor.Server/API/` | Web API controllers (AuthenticationController, ReportController, JobTestController) |
+| `Jobs/IJobHandler.cs` | Handler interface — implement for each command type |
+| `Jobs/IJobDispatcher.cs` | Dispatcher interface — DirectJobDispatcher (dev) or HangfireJobDispatcher (prod) |
+| `Jobs/JobServiceCollectionExtensions.cs` | `AddJobDispatcher()` and `AddJobHandler<T,H>()` DI helpers |
+| `Jobs/DateRangeResolver.cs` | Resolves friendly terms like "last-week" to DateRange |
+| `Module/BusinessObjects/JobDefinition.cs` | Admin-configurable job entity (name, type, params, cron, status) |
+| `Module/Controllers/JobSchedulerViewController.cs` | RunNow action for JobDefinition |
 
 ### Adding a New Business Object
 
@@ -50,12 +57,25 @@ This is a **DevExpress XAF (eXpressApp Framework)** application using **EF Core*
 3. Add `AdditionalExportedTypes.Add(typeof(T))` in `Module.cs` constructor
 4. Optionally expose via Web API in `Startup.cs` → `webApiBuilder.ConfigureOptions`
 
-### Job Dispatcher Pattern
+### Job Dispatcher Pattern (Implemented)
 
-See `job-dispatcher-architecture.md` for the planned Command/Handler + pluggable dispatcher architecture:
-- **Commands** as records, **Handlers** implement `IJobHandler<TCommand>`
+Command/Handler + pluggable dispatcher. See `job-dispatcher-architecture.md` for rationale and `docs/plans/2026-02-18-job-dispatcher-design.md` for full design.
+
+- **Commands** as records in `Jobs/Commands/`, **Handlers** implement `IJobHandler<TCommand>` in `Jobs/Handlers/`
 - **IJobDispatcher** switches between `DirectJobDispatcher` (local dev, inline execution) and `HangfireJobDispatcher` (production, background queuing)
-- Toggled via `Jobs:UseHangfire` in appsettings
+- Toggled via `Jobs:UseHangfire` in appsettings (false in Development, true in Production)
+- Hangfire dashboard at `/hangfire`, job test API at `/api/jobs/`
+- Register new handlers: `services.AddJobHandler<MyCommand, MyHandler>()` in Startup.cs
+
+### Adding a New Job
+
+1. Create command record in `Jobs/Commands/` (e.g., `public record MyCommand(string Param);`)
+2. Create handler in `Jobs/Handlers/` implementing `IJobHandler<MyCommand>`
+3. Register in `Blazor.Server/Startup.cs`: `services.AddJobHandler<MyCommand, MyHandler>()`
+
+### DevExpress 25.2 Gotcha
+
+`SizeAttribute` was removed. Use `FieldSizeAttribute` from `DevExpress.ExpressApp.DC` with `FieldSizeAttribute.Unlimited`.
 
 ### Security Model
 
