@@ -7,6 +7,8 @@ using DevExpress.ExpressApp.Security.Authentication.ClientServer;
 using DevExpress.ExpressApp.WebApi.Services;
 using DevExpress.Persistent.Base;
 using DevExpress.Persistent.BaseImpl.EF.PermissionPolicy;
+using Hangfire;
+using Hangfire.InMemory;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -17,6 +19,9 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using xafhangfire.Blazor.Server.Services;
+using xafhangfire.Jobs;
+using xafhangfire.Jobs.Commands;
+using xafhangfire.Jobs.Handlers;
 using xafhangfire.WebApi.JWT;
 
 namespace xafhangfire.Blazor.Server
@@ -207,6 +212,30 @@ namespace xafhangfire.Blazor.Server
                 //See the following article for more information: https://learn.microsoft.com/en-us/dotnet/api/system.text.json.jsonserializeroptions.propertynamingpolicy
                 o.JsonSerializerOptions.PropertyNamingPolicy = null;
             });
+
+            // Hangfire
+            services.AddHangfire(config => config
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseInMemoryStorage());
+            services.AddHangfireServer();
+
+            // Job handlers
+            services.AddTransient<IJobHandler<DemoLogCommand>, DemoLogHandler>();
+            services.AddTransient<IJobHandler<ListUsersCommand>, ListUsersHandler>();
+            services.AddTransient<JobExecutor<DemoLogCommand>>();
+            services.AddTransient<JobExecutor<ListUsersCommand>>();
+
+            // Job dispatcher — toggled by config
+            if (Configuration.GetValue<bool>("Jobs:UseHangfire"))
+            {
+                services.AddSingleton<IJobDispatcher, HangfireJobDispatcher>();
+            }
+            else
+            {
+                services.AddSingleton<IJobDispatcher, DirectJobDispatcher>();
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -233,6 +262,7 @@ namespace xafhangfire.Blazor.Server
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseHangfireDashboard("/hangfire");
             app.UseAntiforgery();
             app.UseXaf();
             app.UseEndpoints(endpoints =>

@@ -28,11 +28,14 @@
     <PackageReference Include="DevExpress.ExpressApp.ReportsV2.Blazor" Version="25.2.*" />
     <PackageReference Include="DevExpress.ExpressApp.Validation" Version="25.2.*" />
     <PackageReference Include="DevExpress.ExpressApp.Validation.Blazor" Version="25.2.*" />
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.*" />
+    <PackageReference Include="Hangfire.InMemory" Version="1.0.*" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
     <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.9.0" />
-    
+
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\xafhangfire.Module\xafhangfire.Module.csproj" />
+    <ProjectReference Include="..\xafhangfire.Jobs\xafhangfire.Jobs.csproj" />
   </ItemGroup>
 </Project>
