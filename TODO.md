@@ -8,6 +8,8 @@
 
 **Session 3 (2026-02-19):** Report Generation Jobs implemented. Two XtraReport classes (Project Status Report, Contact List by Organization) with GenerateReportCommand/Handler. Reports registered as predefined reports in XAF and seeded as JobDefinitions.
 
+**Session 4 (2026-02-19):** Email Jobs implemented with MailKit. Three commands: SendEmail, SendReportEmail (report as attachment), SendMailMerge (template + CRM contacts). IEmailSender with SmtpEmailSender/LogOnlyEmailSender toggle. EmailTemplate XAF entity with placeholder syntax.
+
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
 - [x] DemoLogCommand/Handler + ListUsersCommand/Handler
@@ -28,6 +30,14 @@
 - [x] Predefined reports registered via PredefinedReportsUpdater in Module.cs
 - [x] 2 report JobDefinitions seeded in Updater.cs
 - [x] CRM seed data (3 organizations, 5 contacts, 4 projects, 10 tasks)
+- [x] SendEmailCommand + SendEmailHandler (single email via IEmailSender)
+- [x] SendReportEmailCommand + SendReportEmailHandler (report generation + email attachment)
+- [x] SendMailMergeCommand + SendMailMergeHandler (template + CRM contacts, placeholder replacement)
+- [x] IEmailSender interface with SmtpEmailSender (MailKit) and LogOnlyEmailSender (dev fallback)
+- [x] EmailTemplate XAF entity (Name, Subject, BodyHtml with {Placeholder} syntax)
+- [x] 2 seed EmailTemplates (Welcome Contact, Project Status Update)
+- [x] 2 email JobDefinitions seeded (Welcome Mail Merge, Email Project Status Report)
+- [x] Email config section in appsettings.json (empty Host = log-only mode)
 
 ## Next Session: Priority Order
 
@@ -47,9 +57,14 @@
 - [ ] Verify jobs persist across app restarts (manual test)
 - [x] Keep in-memory as fallback for dev (no connection string in Development config)
 
-### 3. Future
-- [ ] Email jobs (MailKit) — `SendEmailCommand` + handler
-- [ ] Mail merge (report + email composition)
+### 3. ~~Email Jobs (MailKit)~~ DONE
+- [x] SendEmailCommand, SendReportEmailCommand, SendMailMergeCommand
+- [x] IEmailSender with SmtpEmailSender (MailKit) / LogOnlyEmailSender (dev fallback)
+- [x] EmailTemplate entity with admin-editable templates + {Placeholder} syntax
+- [x] Handlers: SendEmailHandler, SendReportEmailHandler, SendMailMergeHandler
+- [x] Config toggle: `Email:Smtp:Host` present → SMTP, absent → log-only
+
+### 4. Future
 - [ ] Scheduler calendar view bound to JobDefinition
 - [ ] Cron expression → next-run visualization
 - [ ] Rich parameter UI (dynamic forms from command metadata)
@@ -74,6 +89,10 @@ When resuming this project, read these files first:
 
 10. `xafhangfire/xafhangfire.Module/Reports/` — XtraReport classes (ProjectStatusReport, ContactListByOrgReport)
 11. `xafhangfire/xafhangfire.Blazor.Server/Handlers/GenerateReportHandler.cs` — report export handler
+12. `xafhangfire/xafhangfire.Jobs/IEmailSender.cs` — email sender interface
+13. `xafhangfire/xafhangfire.Blazor.Server/Services/SmtpEmailSender.cs` — MailKit SMTP sender
+14. `xafhangfire/xafhangfire.Module/BusinessObjects/EmailTemplate.cs` — email template entity
+15. `docs/plans/2026-02-19-email-jobs-design.md` — email jobs design doc
 
 Then check the TODO list above to see what's done and what's next.
 
