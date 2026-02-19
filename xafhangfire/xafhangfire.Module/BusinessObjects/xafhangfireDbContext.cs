@@ -24,6 +24,10 @@ namespace xafhangfire.Module.BusinessObjects
         public DbSet<ReportDataV2> ReportDataV2 { get; set; }
         public DbSet<HCategory> HCategories { get; set; }
         public DbSet<JobDefinition> JobDefinitions { get; set; }
+        public DbSet<Organization> Organizations { get; set; }
+        public DbSet<Contact> Contacts { get; set; }
+        public DbSet<Project> Projects { get; set; }
+        public DbSet<ProjectTask> ProjectTasks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

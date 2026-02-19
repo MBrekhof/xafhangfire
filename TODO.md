@@ -4,6 +4,8 @@
 
 **Session 1 (2026-02-18):** All 3 phases + follow-up items 1-3 implemented. Solution builds clean. RunNow action dispatches real jobs. 3 sample JobDefinitions seeded. Recurring jobs sync to Hangfire on startup. Manually verified working.
 
+**Session 2 (2026-02-19):** PostgreSQL storage for Hangfire. Uses existing `duetgpt-postgres` Docker container with dedicated `hangfire` database. Falls back to in-memory when no connection string configured.
+
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
 - [x] DemoLogCommand/Handler + ListUsersCommand/Handler
@@ -17,6 +19,7 @@
 - [x] JobSyncService — syncs enabled cron jobs to Hangfire on startup
 - [x] DevExpress Scheduler module registered
 - [x] DateRangeResolver for friendly calendar terms
+- [x] Hangfire PostgreSQL storage (Hangfire.PostgreSql) with in-memory fallback
 
 ## Next Session: Priority Order
 
@@ -27,13 +30,13 @@
 - [ ] Seed a sample report JobDefinition
 - [ ] Output: generate PDF/Excel to a file or byte array
 
-### 2. Persistent Hangfire Storage (PostgreSQL via Docker)
-- [ ] Start PostgreSQL container via Docker Desktop (user has images available)
-- [ ] Add `Hangfire.PostgreSql` NuGet package to Blazor.Server
-- [ ] Add PostgreSQL connection string to appsettings
-- [ ] Replace `UseInMemoryStorage()` with `UsePostgreSqlStorage()` in Startup.cs
-- [ ] Verify jobs persist across app restarts
-- [ ] Keep in-memory as fallback for dev (config toggle or fallback)
+### 2. ~~Persistent Hangfire Storage (PostgreSQL via Docker)~~ DONE
+- [x] Reused existing `duetgpt-postgres` container, created `hangfire` database + user
+- [x] Add `Hangfire.PostgreSql` NuGet package to Blazor.Server
+- [x] Add PostgreSQL connection string to appsettings (`HangfireConnection`)
+- [x] Conditional storage: PostgreSQL when connection string present, in-memory when absent
+- [ ] Verify jobs persist across app restarts (manual test)
+- [x] Keep in-memory as fallback for dev (no connection string in Development config)
 
 ### 3. Future
 - [ ] Email jobs (MailKit) — `SendEmailCommand` + handler

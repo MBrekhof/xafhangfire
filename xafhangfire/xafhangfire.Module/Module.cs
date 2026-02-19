@@ -43,6 +43,10 @@ namespace xafhangfire.Module
             AdditionalExportedTypes.Add(typeof(DevExpress.Persistent.BaseImpl.EF.FileAttachment));
             AdditionalExportedTypes.Add(typeof(DevExpress.Persistent.BaseImpl.EF.HCategory));
             AdditionalExportedTypes.Add(typeof(xafhangfire.Module.BusinessObjects.JobDefinition));
+            AdditionalExportedTypes.Add(typeof(xafhangfire.Module.BusinessObjects.Organization));
+            AdditionalExportedTypes.Add(typeof(xafhangfire.Module.BusinessObjects.Contact));
+            AdditionalExportedTypes.Add(typeof(xafhangfire.Module.BusinessObjects.Project));
+            AdditionalExportedTypes.Add(typeof(xafhangfire.Module.BusinessObjects.ProjectTask));
         }
         public override IEnumerable<ModuleUpdater> GetModuleUpdaters(IObjectSpace objectSpace, Version versionFromDB)
         {
