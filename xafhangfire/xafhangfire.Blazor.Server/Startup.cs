@@ -240,6 +240,7 @@ namespace xafhangfire.Blazor.Server
             services.AddJobDispatcher(Configuration);
             services.AddJobHandler<DemoLogCommand, DemoLogHandler>();
             services.AddJobHandler<ListUsersCommand, ListUsersHandler>();
+            services.AddJobHandler<GenerateReportCommand, xafhangfire.Blazor.Server.Handlers.GenerateReportHandler>();
             services.AddTransient<JobDispatchService>();
             services.AddHostedService<JobSyncService>();
         }

@@ -51,7 +51,13 @@ namespace xafhangfire.Module
         public override IEnumerable<ModuleUpdater> GetModuleUpdaters(IObjectSpace objectSpace, Version versionFromDB)
         {
             ModuleUpdater updater = new DatabaseUpdate.Updater(objectSpace, versionFromDB);
-            return new ModuleUpdater[] { updater };
+            PredefinedReportsUpdater predefinedReportsUpdater =
+                new PredefinedReportsUpdater(Application, objectSpace, versionFromDB);
+            predefinedReportsUpdater.AddPredefinedReport<Reports.ProjectStatusReport>(
+                "Project Status Report", typeof(BusinessObjects.Project));
+            predefinedReportsUpdater.AddPredefinedReport<Reports.ContactListByOrgReport>(
+                "Contact List by Organization", typeof(BusinessObjects.Contact));
+            return new ModuleUpdater[] { updater, predefinedReportsUpdater };
         }
         public override void Setup(XafApplication application)
         {

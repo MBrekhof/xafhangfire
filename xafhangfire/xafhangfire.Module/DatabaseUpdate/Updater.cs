@@ -118,6 +118,24 @@ namespace xafhangfire.Module.DatabaseUpdate
                 scheduledJob.CronExpression = "*/5 * * * *";
                 scheduledJob.IsEnabled = true;
             }
+
+            if (ObjectSpace.FirstOrDefault<JobDefinition>(j => j.Name == "Generate Project Status Report") == null)
+            {
+                var projectReportJob = ObjectSpace.CreateObject<JobDefinition>();
+                projectReportJob.Name = "Generate Project Status Report";
+                projectReportJob.JobTypeName = "GenerateReportCommand";
+                projectReportJob.ParametersJson = "{\"ReportName\":\"Project Status Report\",\"OutputFormat\":\"Pdf\"}";
+                projectReportJob.IsEnabled = true;
+            }
+
+            if (ObjectSpace.FirstOrDefault<JobDefinition>(j => j.Name == "Generate Contact List Report") == null)
+            {
+                var contactReportJob = ObjectSpace.CreateObject<JobDefinition>();
+                contactReportJob.Name = "Generate Contact List Report";
+                contactReportJob.JobTypeName = "GenerateReportCommand";
+                contactReportJob.ParametersJson = "{\"ReportName\":\"Contact List by Organization\",\"OutputFormat\":\"Pdf\"}";
+                contactReportJob.IsEnabled = true;
+            }
         }
         void SeedCrmData()
         {

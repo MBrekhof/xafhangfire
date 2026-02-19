@@ -34,6 +34,14 @@ public sealed class JobDispatchService(
                 await dispatcher.DispatchAsync(listCmd, cancellationToken);
                 break;
 
+            case nameof(GenerateReportCommand):
+                var reportCmd = string.IsNullOrWhiteSpace(parametersJson)
+                    ? new GenerateReportCommand("Project Status Report")
+                    : JsonSerializer.Deserialize<GenerateReportCommand>(parametersJson)
+                      ?? new GenerateReportCommand("Project Status Report");
+                await dispatcher.DispatchAsync(reportCmd, cancellationToken);
+                break;
+
             default:
                 throw new InvalidOperationException($"Unknown job type: '{jobTypeName}'");
         }
@@ -63,6 +71,14 @@ public sealed class JobDispatchService(
                     : JsonSerializer.Deserialize<ListUsersCommand>(parametersJson)
                       ?? new ListUsersCommand();
                 dispatcher.Schedule(listCmd, cronExpression);
+                break;
+
+            case nameof(GenerateReportCommand):
+                var reportScheduleCmd = string.IsNullOrWhiteSpace(parametersJson)
+                    ? new GenerateReportCommand("Project Status Report")
+                    : JsonSerializer.Deserialize<GenerateReportCommand>(parametersJson)
+                      ?? new GenerateReportCommand("Project Status Report");
+                dispatcher.Schedule(reportScheduleCmd, cronExpression);
                 break;
 
             default:
