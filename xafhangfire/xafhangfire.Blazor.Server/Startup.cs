@@ -9,6 +9,7 @@ using DevExpress.Persistent.Base;
 using DevExpress.Persistent.BaseImpl.EF.PermissionPolicy;
 using Hangfire;
 using Hangfire.InMemory;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -215,11 +216,24 @@ namespace xafhangfire.Blazor.Server
             });
 
             // Hangfire
-            services.AddHangfire(config => config
-                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-                .UseSimpleAssemblyNameTypeSerializer()
-                .UseRecommendedSerializerSettings()
-                .UseInMemoryStorage());
+            var hangfireConnectionString = Configuration.GetConnectionString("HangfireConnection");
+            services.AddHangfire(config =>
+            {
+                config
+                    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                    .UseSimpleAssemblyNameTypeSerializer()
+                    .UseRecommendedSerializerSettings();
+
+                if (!string.IsNullOrEmpty(hangfireConnectionString))
+                {
+                    config.UsePostgreSqlStorage(options =>
+                        options.UseNpgsqlConnection(hangfireConnectionString));
+                }
+                else
+                {
+                    config.UseInMemoryStorage();
+                }
+            });
             services.AddHangfireServer();
 
             // Job dispatcher + handlers
