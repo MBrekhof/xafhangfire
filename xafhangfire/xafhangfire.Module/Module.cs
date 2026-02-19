@@ -47,6 +47,7 @@ namespace xafhangfire.Module
             AdditionalExportedTypes.Add(typeof(xafhangfire.Module.BusinessObjects.Contact));
             AdditionalExportedTypes.Add(typeof(xafhangfire.Module.BusinessObjects.Project));
             AdditionalExportedTypes.Add(typeof(xafhangfire.Module.BusinessObjects.ProjectTask));
+            AdditionalExportedTypes.Add(typeof(xafhangfire.Module.BusinessObjects.EmailTemplate));
         }
         public override IEnumerable<ModuleUpdater> GetModuleUpdaters(IObjectSpace objectSpace, Version versionFromDB)
         {

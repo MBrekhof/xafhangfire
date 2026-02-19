@@ -72,6 +72,9 @@ namespace xafhangfire.Module.DatabaseUpdate
 
             SeedCrmData();
             ObjectSpace.CommitChanges();
+
+            SeedEmailTemplates();
+            ObjectSpace.CommitChanges();
 #endif
         }
         public override void UpdateDatabaseBeforeUpdateSchema()
@@ -135,6 +138,24 @@ namespace xafhangfire.Module.DatabaseUpdate
                 contactReportJob.JobTypeName = "GenerateReportCommand";
                 contactReportJob.ParametersJson = "{\"ReportName\":\"Contact List by Organization\",\"OutputFormat\":\"Pdf\"}";
                 contactReportJob.IsEnabled = true;
+            }
+
+            if (ObjectSpace.FirstOrDefault<JobDefinition>(j => j.Name == "Welcome Mail Merge") == null)
+            {
+                var mailMergeJob = ObjectSpace.CreateObject<JobDefinition>();
+                mailMergeJob.Name = "Welcome Mail Merge";
+                mailMergeJob.JobTypeName = "SendMailMergeCommand";
+                mailMergeJob.ParametersJson = "{\"TemplateName\":\"Welcome Contact\"}";
+                mailMergeJob.IsEnabled = true;
+            }
+
+            if (ObjectSpace.FirstOrDefault<JobDefinition>(j => j.Name == "Email Project Status Report") == null)
+            {
+                var reportEmailJob = ObjectSpace.CreateObject<JobDefinition>();
+                reportEmailJob.Name = "Email Project Status Report";
+                reportEmailJob.JobTypeName = "SendReportEmailCommand";
+                reportEmailJob.ParametersJson = "{\"ReportName\":\"Project Status Report\",\"Recipients\":\"admin@example.com\",\"OutputFormat\":\"Pdf\"}";
+                reportEmailJob.IsEnabled = true;
             }
         }
         void SeedCrmData()
@@ -336,6 +357,30 @@ namespace xafhangfire.Module.DatabaseUpdate
             t10.DueDate = new DateTime(2025, 10, 15);
             t10.Project = compliance;
             t10.AssignedTo = alice;
+        }
+
+        void SeedEmailTemplates()
+        {
+            if (ObjectSpace.FirstOrDefault<EmailTemplate>(t => t.Name == "Welcome Contact") != null)
+                return;
+
+            var welcome = ObjectSpace.CreateObject<EmailTemplate>();
+            welcome.Name = "Welcome Contact";
+            welcome.Subject = "Welcome, {FirstName}!";
+            welcome.BodyHtml = @"<h2>Hello {FullName},</h2>
+<p>Welcome to our platform! We're excited to have you on board at <strong>{Organization.Name}</strong>.</p>
+<p>As a {JobTitle}, you'll find our tools helpful for managing your projects and tasks.</p>
+<p>Best regards,<br/>The XAF Hangfire Team</p>";
+            welcome.Description = "Sent to new contacts when they are added to the system.";
+
+            var statusUpdate = ObjectSpace.CreateObject<EmailTemplate>();
+            statusUpdate.Name = "Project Status Update";
+            statusUpdate.Subject = "Project Status Update for {Organization.Name}";
+            statusUpdate.BodyHtml = @"<h2>Hi {FirstName},</h2>
+<p>Here is your periodic project status update for <strong>{Organization.Name}</strong>.</p>
+<p>Please review the latest project activities and reach out if you have any questions.</p>
+<p>Best regards,<br/>The XAF Hangfire Team</p>";
+            statusUpdate.Description = "Periodic status update sent to contacts about their organization's projects.";
         }
 
         PermissionPolicyRole CreateDefaultRole()

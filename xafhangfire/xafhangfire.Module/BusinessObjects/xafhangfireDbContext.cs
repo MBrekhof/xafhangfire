@@ -28,6 +28,7 @@ namespace xafhangfire.Module.BusinessObjects
         public DbSet<Contact> Contacts { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectTask> ProjectTasks { get; set; }
+        public DbSet<EmailTemplate> EmailTemplates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

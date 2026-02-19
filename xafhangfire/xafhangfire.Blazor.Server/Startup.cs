@@ -236,11 +236,24 @@ namespace xafhangfire.Blazor.Server
             });
             services.AddHangfireServer();
 
+            // Email sender — SMTP when configured, log-only fallback
+            if (!string.IsNullOrEmpty(Configuration["Email:Smtp:Host"]))
+            {
+                services.AddTransient<IEmailSender, SmtpEmailSender>();
+            }
+            else
+            {
+                services.AddTransient<IEmailSender, LogOnlyEmailSender>();
+            }
+
             // Job dispatcher + handlers
             services.AddJobDispatcher(Configuration);
             services.AddJobHandler<DemoLogCommand, DemoLogHandler>();
             services.AddJobHandler<ListUsersCommand, ListUsersHandler>();
             services.AddJobHandler<GenerateReportCommand, xafhangfire.Blazor.Server.Handlers.GenerateReportHandler>();
+            services.AddJobHandler<SendEmailCommand, SendEmailHandler>();
+            services.AddJobHandler<SendMailMergeCommand, SendMailMergeHandler>();
+            services.AddJobHandler<SendReportEmailCommand, xafhangfire.Blazor.Server.Handlers.SendReportEmailHandler>();
             services.AddTransient<JobDispatchService>();
             services.AddHostedService<JobSyncService>();
         }
