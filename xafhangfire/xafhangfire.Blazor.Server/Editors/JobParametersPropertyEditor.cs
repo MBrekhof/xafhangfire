@@ -226,15 +226,21 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
 
             using var report = reportService.LoadReport<ReportDataV2>(
                 r => r.DisplayName == reportName);
-            reportService.SetupReport(report);
 
             var pairs = new List<KeyValuePairModel>();
             foreach (DevExpress.XtraReports.Parameters.Parameter p in report.Parameters)
             {
                 if (!p.Visible) continue;
+                // Name is the code identifier; Description is the display label.
+                // Prefer Name (used by ReportParameterHelper for lookup), fall back to Description.
+                var key = !string.IsNullOrEmpty(p.Name) ? p.Name
+                        : !string.IsNullOrEmpty(p.Description) ? p.Description
+                        : null;
+                if (key == null) continue;
+
                 pairs.Add(new KeyValuePairModel
                 {
-                    Key = p.Name,
+                    Key = key,
                     Value = p.Value?.ToString() ?? string.Empty
                 });
             }

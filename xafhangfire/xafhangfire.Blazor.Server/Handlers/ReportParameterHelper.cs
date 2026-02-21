@@ -17,7 +17,11 @@ internal static class ReportParameterHelper
 
         foreach (var (key, value) in parameters)
         {
-            var param = report.Parameters[key];
+            // Try lookup by Name first, then fall back to Description
+            // (XAF report designer may populate Description instead of Name)
+            var param = report.Parameters[key]
+                ?? report.Parameters.Cast<DevExpress.XtraReports.Parameters.Parameter>()
+                    .FirstOrDefault(p => string.Equals(p.Description, key, StringComparison.OrdinalIgnoreCase));
             if (param is null)
             {
                 logger.LogWarning("Report parameter '{ParameterName}' not found — skipping", key);
