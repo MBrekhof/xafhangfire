@@ -27,7 +27,7 @@ public sealed class DirectJobDispatcher(
         var reporter = scope.ServiceProvider.GetService<IJobProgressReporter>();
         var commandType = typeof(TCommand).Name;
         string? parametersJson = null;
-        try { parametersJson = JsonSerializer.Serialize(command); } catch { /* best-effort */ }
+        try { parametersJson = JsonSerializer.Serialize(command, new JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull }); } catch { /* best-effort */ }
 
         var recordId = recorder != null
             ? await recorder.RecordStartAsync(commandType, commandType, parametersJson, cancellationToken)

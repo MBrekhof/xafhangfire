@@ -16,7 +16,7 @@ public sealed class JobExecutor<TCommand>(
 
         var commandType = typeof(TCommand).Name;
         string? parametersJson = null;
-        try { parametersJson = JsonSerializer.Serialize(command); } catch { /* best-effort */ }
+        try { parametersJson = JsonSerializer.Serialize(command, new JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull }); } catch { /* best-effort */ }
 
         var recordId = await executionRecorder.RecordStartAsync(commandType, commandType, parametersJson, cancellationToken);
         progressReporter.Initialize(recordId);
