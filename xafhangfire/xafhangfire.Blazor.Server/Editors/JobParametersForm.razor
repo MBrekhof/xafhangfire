@@ -23,6 +23,42 @@ else
                     <DxCheckBox Checked="@field.BoolValue"
                                 CheckedChanged="@((bool v) => OnBoolChanged(field, v))" />
                     break;
+                case "dropdown":
+                    <DxComboBox Data="@field.DropdownItems"
+                                Value="@field.StringValue"
+                                ValueChanged="@((string v) => OnStringChanged(field, v))"
+                                AllowUserInput="true"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                NullText="Select..."
+                                CssClass="w-100" />
+                    break;
+                case "keyvalue":
+                    <div class="border rounded p-2">
+                        @foreach (var kvp in field.KeyValuePairs)
+                        {
+                            <div class="d-flex gap-2 mb-1 align-items-center">
+                                <DxTextBox Value="@kvp.Key"
+                                           ValueChanged="@((string v) => OnKvKeyChanged(field, kvp, v))"
+                                           NullText="Key"
+                                           CssClass="flex-grow-1" />
+                                <DxTextBox Value="@kvp.Value"
+                                           ValueChanged="@((string v) => OnKvValueChanged(field, kvp, v))"
+                                           NullText="Value"
+                                           CssClass="flex-grow-1" />
+                                <DxButton RenderStyle="ButtonRenderStyle.Danger"
+                                          RenderStyleMode="ButtonRenderStyleMode.Outline"
+                                          IconCssClass="oi oi-trash"
+                                          Click="@(() => OnKvRemove(field, kvp))" />
+                            </div>
+                        }
+                        <DxButton Text="Add Parameter"
+                                  RenderStyle="ButtonRenderStyle.Secondary"
+                                  RenderStyleMode="ButtonRenderStyleMode.Outline"
+                                  IconCssClass="oi oi-plus"
+                                  Click="@(() => OnKvAdd(field))"
+                                  CssClass="mt-1" />
+                    </div>
+                    break;
                 case "json":
                     <DxMemo Value="@field.StringValue"
                             ValueChanged="@((string v) => OnStringChanged(field, v))"
@@ -74,6 +110,30 @@ else
         await NotifyJsonChanged();
     }
 
+    private async Task OnKvKeyChanged(ParameterFieldModel field, KeyValuePairModel kvp, string value)
+    {
+        kvp.Key = value;
+        await NotifyJsonChanged();
+    }
+
+    private async Task OnKvValueChanged(ParameterFieldModel field, KeyValuePairModel kvp, string value)
+    {
+        kvp.Value = value;
+        await NotifyJsonChanged();
+    }
+
+    private async Task OnKvRemove(ParameterFieldModel field, KeyValuePairModel kvp)
+    {
+        field.KeyValuePairs.Remove(kvp);
+        await NotifyJsonChanged();
+    }
+
+    private async Task OnKvAdd(ParameterFieldModel field)
+    {
+        field.KeyValuePairs.Add(new KeyValuePairModel());
+        await NotifyJsonChanged();
+    }
+
     private async Task NotifyJsonChanged()
     {
         var json = SerializeFields();
@@ -93,6 +153,16 @@ else
                 case "bool":
                     dict[field.Name] = field.BoolValue;
                     break;
+                case "keyvalue":
+                    var kvDict = new Dictionary<string, string>();
+                    foreach (var kvp in field.KeyValuePairs)
+                    {
+                        if (!string.IsNullOrWhiteSpace(kvp.Key))
+                            kvDict[kvp.Key] = kvp.Value;
+                    }
+                    if (kvDict.Count > 0)
+                        dict[field.Name] = kvDict;
+                    break;
                 case "json":
                     try
                     {
@@ -103,7 +173,7 @@ else
                         dict[field.Name] = field.StringValue;
                     }
                     break;
-                default:
+                default: // string, dropdown
                     if (!string.IsNullOrEmpty(field.StringValue))
                         dict[field.Name] = field.StringValue;
                     break;

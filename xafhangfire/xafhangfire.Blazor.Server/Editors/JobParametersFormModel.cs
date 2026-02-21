@@ -36,9 +36,17 @@ public class ParameterFieldModel
 {
     public string Name { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
-    public string FieldType { get; set; } = "string"; // string, int, bool, json
+    public string FieldType { get; set; } = "string"; // string, int, bool, json, keyvalue, dropdown
     public bool IsRequired { get; set; }
     public string StringValue { get; set; } = string.Empty;
     public int IntValue { get; set; }
     public bool BoolValue { get; set; }
+    public List<KeyValuePairModel> KeyValuePairs { get; set; } = new();
+    public List<string> DropdownItems { get; set; } = new();
+}
+
+public class KeyValuePairModel
+{
+    public string Key { get; set; } = string.Empty;
+    public string Value { get; set; } = string.Empty;
 }
