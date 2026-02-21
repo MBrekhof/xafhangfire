@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: xafhangfire-postgres
+    environment:
+      POSTGRES_USER: xafhangfire
+      POSTGRES_PASSWORD: xafhangfire
+      POSTGRES_DB: xafhangfire
+    ports:
+      - "5433:5432"
+    volumes:
+      - xafhangfire-pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  xafhangfire-pgdata:
