@@ -152,7 +152,7 @@ Date parameters support friendly terms via `DateRangeResolver`: `today`, `yester
 ```
 
 - **Email**: Leave `Host` empty for log-only mode (dev). Set SMTP host for real delivery.
-- **Reports**: Output directory for generated reports (relative to app root or absolute path).
+- **Reports**: Output directory for generated reports (relative to app root or absolute path). Use forward slashes for Windows paths in JSON (e.g., `c:/projects/xafhangfire/reports`).
 
 ## Adding a New Job
 
