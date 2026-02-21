@@ -14,6 +14,8 @@
 
 **Session 6 (2026-02-21):** Report parameters support (Dictionary<string, string> with DateRangeResolver integration). Hangfire dashboard authorization (IDashboardAuthorizationFilter, Administrators-only in production). Job execution history tracking (JobExecutionRecord entity + IJobExecutionRecorder). Updated README with full project documentation. Created integration guide (docs/integration-guide.md). xUnit test project with 44 tests covering DateRangeResolver, JobDispatchService, DirectJobDispatcher, handlers, and LogOnlyEmailSender.
 
+**Session 7 (2026-02-21):** Job progress reporting (IJobProgressReporter interface, XafJobProgressReporter implementation, DemoLogHandler reports progress during loop). Consecutive failure tracking (ConsecutiveFailures counter on JobDefinition, reset on success, incremented on failure, warning logged at configurable threshold).
+
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
 - [x] DemoLogCommand/Handler + ListUsersCommand/Handler
@@ -64,14 +66,23 @@
 - [x] Integration guide — `docs/integration-guide.md` with step-by-step XAF integration instructions
 - [x] xUnit test project (`xafhangfire.Jobs.Tests`) — 44 tests covering DateRangeResolver, JobDispatchService, DirectJobDispatcher, SendEmailHandler, DemoLogHandler, LogOnlyEmailSender
 - [x] FluentAssertions + NSubstitute for assertions and mocking
+- [x] IJobProgressReporter interface + XafJobProgressReporter implementation (updates JobExecutionRecord progress)
+- [x] NullJobProgressReporter (no-op default for tests and non-XAF contexts)
+- [x] JobExecutor and DirectJobDispatcher initialize progress reporter with execution record ID
+- [x] DemoLogHandler reports progress (percent + step message) during delay loop
+- [x] ProgressPercent + ProgressMessage fields on JobExecutionRecord
+- [x] ConsecutiveFailures counter on JobDefinition (reset on success, incremented on failure)
+- [x] XafJobExecutionRecorder updates JobDefinition status (LastRunUtc, LastRunStatus, LastRunMessage) on completion/failure
+- [x] Configurable failure alert threshold (`Jobs:FailureAlertThreshold` in appsettings.json, default: 3)
+- [x] Warning logged when consecutive failures reach threshold
 
 ## Future
 - [ ] Scheduler calendar view bound to JobDefinition
 - [ ] Cron expression → next-run visualization
 - [ ] Rich parameter UI (dynamic forms from command metadata)
 - [ ] Expand test coverage (Blazor.Server handlers with mocked IReportExportService, integration tests)
-- [ ] Job progress/cancellation (CancellationToken + progress reporting for long-running jobs)
-- [ ] Error notifications (alert on repeated job failures via email or XAF notification)
+- [ ] Real-time progress UI (SignalR push of progress updates to XAF detail view)
+- [ ] Email notifications on repeated failures (extend failure tracking to send alert emails)
 - [ ] Verify jobs persist across app restarts (manual test)
 
 ## Architecture Decisions
@@ -81,6 +92,8 @@
 - Report parameters use `Dictionary<string, string>` (not strongly typed) — parameters vary per report and are stored as JSON.
 - Job execution records use `INonSecuredObjectSpaceFactory` — recorder runs in background context, doesn't need secured access.
 - Hangfire dashboard auth uses ASP.NET Core `HttpContext` claims, not XAF security — dashboard is middleware-level.
+- Progress reporting is opt-in — handlers accept `IJobProgressReporter` via constructor injection, executors initialize it with the record ID.
+- Consecutive failure tracking updates `JobDefinition` inline during recording — no separate background process needed.
 
 ## Claude Continuation Instructions
 
@@ -112,6 +125,10 @@ When resuming this project, read these files first:
 24. `xafhangfire/xafhangfire.Jobs/IJobExecutionRecorder.cs` — execution recording interface
 25. `xafhangfire/xafhangfire.Blazor.Server/Services/XafJobExecutionRecorder.cs` — XAF recorder implementation
 26. `docs/integration-guide.md` — integration guide for other XAF solutions
+27. `xafhangfire/xafhangfire.Jobs/IJobProgressReporter.cs` — progress reporting interface
+28. `xafhangfire/xafhangfire.Jobs/NullJobProgressReporter.cs` — no-op progress reporter
+29. `xafhangfire/xafhangfire.Blazor.Server/Services/XafJobProgressReporter.cs` — XAF progress reporter implementation
+30. `docs/plans/2026-02-21-progress-and-error-notifications-design.md` — progress + failure tracking design
 
 Then check the TODO list above to see what's done and what's next.
 

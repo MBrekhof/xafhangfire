@@ -258,6 +258,9 @@ namespace xafhangfire.Blazor.Server
             // Job execution recorder — tracks job runs in the database
             services.AddScoped<IJobExecutionRecorder, xafhangfire.Blazor.Server.Services.XafJobExecutionRecorder>();
 
+            // Job progress reporter — updates execution record with progress
+            services.AddScoped<IJobProgressReporter, xafhangfire.Blazor.Server.Services.XafJobProgressReporter>();
+
             // Job dispatcher + handlers
             services.AddJobDispatcher(Configuration);
             services.AddJobHandler<DemoLogCommand, DemoLogHandler>();

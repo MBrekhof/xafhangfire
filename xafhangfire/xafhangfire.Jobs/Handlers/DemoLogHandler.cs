@@ -4,7 +4,8 @@ using xafhangfire.Jobs.Commands;
 namespace xafhangfire.Jobs.Handlers;
 
 public sealed class DemoLogHandler(
-    ILogger<DemoLogHandler> logger) : IJobHandler<DemoLogCommand>
+    ILogger<DemoLogHandler> logger,
+    IJobProgressReporter progressReporter) : IJobHandler<DemoLogCommand>
 {
     public async Task ExecuteAsync(
         DemoLogCommand command,
@@ -15,6 +16,8 @@ public sealed class DemoLogHandler(
         for (var i = 1; i <= command.DelaySeconds; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var percent = (int)((double)i / command.DelaySeconds * 100);
+            await progressReporter.ReportAsync(percent, $"Step {i}/{command.DelaySeconds}", cancellationToken);
             logger.LogInformation("DemoLogHandler: working... {Second}/{Total}", i, command.DelaySeconds);
             await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
         }

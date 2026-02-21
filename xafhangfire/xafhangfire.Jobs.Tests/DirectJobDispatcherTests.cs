@@ -20,6 +20,7 @@ public class DirectJobDispatcherTests
         services.AddSingleton(_handler);
         services.AddSingleton<IJobScopeInitializer>(_initializer);
         services.AddSingleton<IJobExecutionRecorder>(_recorder);
+        services.AddSingleton<IJobProgressReporter>(new NullJobProgressReporter());
         var provider = services.BuildServiceProvider();
 
         _sut = new DirectJobDispatcher(provider.GetRequiredService<IServiceScopeFactory>(),

@@ -7,7 +7,7 @@ namespace xafhangfire.Jobs.Tests.Handlers;
 
 public class DemoLogHandlerTests
 {
-    private readonly DemoLogHandler _sut = new(NullLogger<DemoLogHandler>.Instance);
+    private readonly DemoLogHandler _sut = new(NullLogger<DemoLogHandler>.Instance, new NullJobProgressReporter());
 
     [Fact]
     public async Task ExecuteAsync_CompletesSuccessfully()

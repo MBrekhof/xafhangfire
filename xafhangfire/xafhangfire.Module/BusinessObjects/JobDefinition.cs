@@ -55,6 +55,8 @@ namespace xafhangfire.Module.BusinessObjects
         [VisibleInListView(false)]
         public virtual string LastRunMessage { get; set; }
 
+        public virtual int ConsecutiveFailures { get; set; }
+
         public virtual ObservableCollection<JobExecutionRecord> ExecutionHistory { get; set; } = new();
     }
 }

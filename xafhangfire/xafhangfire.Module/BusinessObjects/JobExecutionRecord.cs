@@ -31,6 +31,10 @@ namespace xafhangfire.Module.BusinessObjects
 
         public virtual long DurationMs { get; set; }
 
+        public virtual int ProgressPercent { get; set; }
+
+        public virtual string ProgressMessage { get; set; }
+
         [FieldSize(FieldSizeAttribute.Unlimited)]
         [VisibleInListView(false)]
         public virtual string ParametersJson { get; set; }

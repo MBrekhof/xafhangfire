@@ -12,6 +12,8 @@ This project demonstrates a **Command/Handler + Pluggable Dispatcher** pattern t
 - **Report generation** — DevExpress XtraReport export to PDF/XLSX with parameterized reports
 - **Email jobs** — MailKit SMTP with templates, mail merge, and report-as-attachment
 - **Job execution history** — every run tracked with status, duration, and error details
+- **Job progress reporting** — opt-in progress updates (percent + message) for long-running handlers
+- **Failure tracking** — consecutive failure counter with configurable alert threshold
 - **Hangfire dashboard** — role-based access control (Administrators only in production)
 - **Admin UI** — XAF auto-generated CRUD views for JobDefinitions, templates, CRM entities
 - **Background auth** — HangfireJob service user for secured object space access
@@ -126,6 +128,33 @@ Reports accept parameters via `ReportParameters` dictionary in the command JSON:
 
 Date parameters support friendly terms via `DateRangeResolver`: `today`, `yesterday`, `this-week`, `last-week`, `this-month`, `last-month`, `this-quarter`, `last-quarter`, `this-year`, `last-year`.
 
+### Job Progress Reporting
+
+Handlers can opt into progress reporting by accepting `IJobProgressReporter` via constructor injection:
+
+```csharp
+public sealed class MyHandler(
+    ILogger<MyHandler> logger,
+    IJobProgressReporter progressReporter) : IJobHandler<MyCommand>
+{
+    public async Task ExecuteAsync(MyCommand command, CancellationToken cancellationToken)
+    {
+        for (var i = 0; i < totalSteps; i++)
+        {
+            var percent = (int)((double)(i + 1) / totalSteps * 100);
+            await progressReporter.ReportAsync(percent, $"Step {i + 1}/{totalSteps}", cancellationToken);
+            // ... do work ...
+        }
+    }
+}
+```
+
+Progress updates (`ProgressPercent` and `ProgressMessage`) are written to the `JobExecutionRecord` in real time.
+
+### Consecutive Failure Tracking
+
+`JobDefinition.ConsecutiveFailures` tracks how many times a job has failed in a row. The counter resets to 0 on success and increments on failure. When failures reach the configured threshold (`Jobs:FailureAlertThreshold`, default: 3), a warning is logged.
+
 ## Configuration
 
 ### appsettings.json
@@ -136,7 +165,8 @@ Date parameters support friendly terms via `DateRangeResolver`: `today`, `yester
     "ConnectionString": "EFCoreProvider=PostgreSql; Host=localhost;Port=5433;Database=xafhangfire;Username=xafhangfire;Password=xafhangfire"
   },
   "Jobs": {
-    "UseHangfire": true
+    "UseHangfire": true,
+    "FailureAlertThreshold": 3
   },
   "Email": {
     "Smtp": {
@@ -195,6 +225,7 @@ See [docs/integration-guide.md](docs/integration-guide.md) for integrating this 
 | [docs/plans/2026-02-19-email-jobs-design.md](docs/plans/2026-02-19-email-jobs-design.md) | Email jobs design |
 | [docs/plans/2026-02-21-postgresql-migration-design.md](docs/plans/2026-02-21-postgresql-migration-design.md) | PostgreSQL migration design |
 | [docs/plans/2026-02-21-hangfire-auth-fix-design.md](docs/plans/2026-02-21-hangfire-auth-fix-design.md) | Background job auth fix |
+| [docs/plans/2026-02-21-progress-and-error-notifications-design.md](docs/plans/2026-02-21-progress-and-error-notifications-design.md) | Progress reporting + failure tracking |
 
 ## Status
 

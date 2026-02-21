@@ -1,5 +1,6 @@
 #nullable enable
 using DevExpress.ExpressApp;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using xafhangfire.Jobs;
 using xafhangfire.Module.BusinessObjects;
@@ -8,8 +9,11 @@ namespace xafhangfire.Blazor.Server.Services;
 
 public sealed class XafJobExecutionRecorder(
     INonSecuredObjectSpaceFactory objectSpaceFactory,
+    IConfiguration configuration,
     ILogger<XafJobExecutionRecorder> logger) : IJobExecutionRecorder
 {
+    private int FailureAlertThreshold => configuration.GetValue("Jobs:FailureAlertThreshold", 3);
+
     public Task<Guid> RecordStartAsync(string jobName, string jobTypeName, string? parametersJson, CancellationToken cancellationToken = default)
     {
         try
@@ -54,6 +58,16 @@ public sealed class XafJobExecutionRecorder(
                 record.CompletedUtc = DateTime.UtcNow;
                 record.Status = JobRunStatus.Success;
                 record.DurationMs = (long)(record.CompletedUtc.Value - record.StartedUtc).TotalMilliseconds;
+
+                // Update JobDefinition — reset consecutive failures on success
+                if (record.JobDefinition != null)
+                {
+                    record.JobDefinition.LastRunUtc = record.CompletedUtc;
+                    record.JobDefinition.LastRunStatus = JobRunStatus.Success;
+                    record.JobDefinition.LastRunMessage = string.Empty;
+                    record.JobDefinition.ConsecutiveFailures = 0;
+                }
+
                 objectSpace.CommitChanges();
 
                 logger.LogDebug("Recorded job completion: {RecordId} ({DurationMs}ms)", recordId, record.DurationMs);
@@ -82,6 +96,27 @@ public sealed class XafJobExecutionRecorder(
                 record.Status = JobRunStatus.Failed;
                 record.DurationMs = (long)(record.CompletedUtc.Value - record.StartedUtc).TotalMilliseconds;
                 record.ErrorMessage = errorMessage;
+
+                // Update JobDefinition — increment consecutive failures
+                if (record.JobDefinition != null)
+                {
+                    record.JobDefinition.LastRunUtc = record.CompletedUtc;
+                    record.JobDefinition.LastRunStatus = JobRunStatus.Failed;
+                    record.JobDefinition.LastRunMessage = errorMessage.Length > 500
+                        ? errorMessage[..500]
+                        : errorMessage;
+                    record.JobDefinition.ConsecutiveFailures++;
+
+                    if (record.JobDefinition.ConsecutiveFailures >= FailureAlertThreshold)
+                    {
+                        logger.LogWarning(
+                            "Job '{JobName}' has failed {ConsecutiveFailures} consecutive times (threshold: {Threshold})",
+                            record.JobName,
+                            record.JobDefinition.ConsecutiveFailures,
+                            FailureAlertThreshold);
+                    }
+                }
+
                 objectSpace.CommitChanges();
 
                 logger.LogDebug("Recorded job failure: {RecordId} ({DurationMs}ms)", recordId, record.DurationMs);

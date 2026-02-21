@@ -24,6 +24,7 @@ public sealed class DirectJobDispatcher(
             await initializer.InitializeAsync(cancellationToken);
 
         var recorder = scope.ServiceProvider.GetService<IJobExecutionRecorder>();
+        var reporter = scope.ServiceProvider.GetService<IJobProgressReporter>();
         var commandType = typeof(TCommand).Name;
         string? parametersJson = null;
         try { parametersJson = JsonSerializer.Serialize(command); } catch { /* best-effort */ }
@@ -31,6 +32,7 @@ public sealed class DirectJobDispatcher(
         var recordId = recorder != null
             ? await recorder.RecordStartAsync(commandType, commandType, parametersJson, cancellationToken)
             : Guid.Empty;
+        reporter?.Initialize(recordId);
         try
         {
             var handler = scope.ServiceProvider.GetRequiredService<IJobHandler<TCommand>>();

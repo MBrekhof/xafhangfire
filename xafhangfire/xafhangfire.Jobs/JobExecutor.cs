@@ -6,7 +6,8 @@ namespace xafhangfire.Jobs;
 public sealed class JobExecutor<TCommand>(
     IJobHandler<TCommand> handler,
     IJobScopeInitializer scopeInitializer,
-    IJobExecutionRecorder executionRecorder)
+    IJobExecutionRecorder executionRecorder,
+    IJobProgressReporter progressReporter)
 {
     [AutomaticRetry(Attempts = 3)]
     public async Task RunAsync(TCommand command, CancellationToken cancellationToken)
@@ -18,6 +19,7 @@ public sealed class JobExecutor<TCommand>(
         try { parametersJson = JsonSerializer.Serialize(command); } catch { /* best-effort */ }
 
         var recordId = await executionRecorder.RecordStartAsync(commandType, commandType, parametersJson, cancellationToken);
+        progressReporter.Initialize(recordId);
         try
         {
             await handler.ExecuteAsync(command, cancellationToken);
