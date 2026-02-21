@@ -10,7 +10,7 @@
 
 **Session 4 (2026-02-19):** Email Jobs implemented with MailKit. Three commands: SendEmail, SendReportEmail (report as attachment), SendMailMerge (template + CRM contacts). IEmailSender with SmtpEmailSender/LogOnlyEmailSender toggle. EmailTemplate XAF entity with placeholder syntax.
 
-**Session 5 (2026-02-21):** Migrated application database from SQL Server LocalDB to PostgreSQL 16 in Docker. Consolidated app DB and Hangfire storage into single PostgreSQL instance (`xafhangfire-postgres` container, port 5433). Added docker-compose.yml. Fixed pre-existing ObservableCollection bug in CRM entities. Fixed DI scoping bug (DirectJobDispatcher uses IServiceScopeFactory). Added Serilog structured logging. Fixed XAF security context for background Hangfire jobs (IJobScopeInitializer + HangfireJob service user).
+**Session 5 (2026-02-21):** Migrated application database from SQL Server LocalDB to PostgreSQL 16 in Docker. Consolidated app DB and Hangfire storage into single PostgreSQL instance (`xafhangfire-postgres` container, port 5433). Added docker-compose.yml. Fixed pre-existing ObservableCollection bug in CRM entities. Fixed DI scoping bug (DirectJobDispatcher uses IServiceScopeFactory). Added Serilog structured logging. Fixed XAF security context for background Hangfire jobs (IJobScopeInitializer + HangfireJob service user). Configurable report output directory via `Reports:OutputDirectory` in appsettings.json.
 
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
@@ -50,6 +50,7 @@
 - [x] Serilog structured logging (console + rolling file at `logs/xafhangfire-YYYYMMDD.log`)
 - [x] IJobScopeInitializer — authenticates HangfireJob service user in background job scopes
 - [x] HangfireJob user + BackgroundJobs role (read-only access for report generation)
+- [x] Configurable report output directory (`Reports:OutputDirectory` in appsettings.json, `ReportOutputOptions`)
 
 ## Next Session: Priority Order
 
@@ -125,3 +126,4 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 - PostgreSQL requires `Npgsql.EnableLegacyTimestampBehavior = true` for XAF's `DateTime` properties (set in Startup.cs).
 - Connection strings use `EFCoreProvider=PostgreSql;` prefix for XAF auto-detection. Hangfire needs this prefix stripped (see `StripEFCoreProvider` in Startup.cs).
 - Background Hangfire jobs need `IJobScopeInitializer` to authenticate as "HangfireJob" user — without it, handlers using `IReportExportService` or `IObjectSpaceFactory` fail with "The user name must not be empty".
+- Don't name a class `ReportOptions` — clashes with `DevExpress.ExpressApp.ReportsV2.ReportOptions`. Use `ReportOutputOptions` instead.
