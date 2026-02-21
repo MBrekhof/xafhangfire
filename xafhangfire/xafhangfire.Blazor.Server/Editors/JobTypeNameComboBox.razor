@@ -1,0 +1,29 @@
+@using DevExpress.Blazor
+
+<DxComboBox Data="@Items"
+            Value="@Value"
+            ValueChanged="@((string v) => OnValueChanged(v))"
+            AllowUserInput="true"
+            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+            NullText="Select a command type..."
+            CssClass="w-100"
+            ReadOnly="@ReadOnly" />
+
+@code {
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public List<string> Items { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter]
+    public bool ReadOnly { get; set; }
+
+    private async Task OnValueChanged(string value)
+    {
+        await ValueChanged.InvokeAsync(value ?? string.Empty);
+    }
+}

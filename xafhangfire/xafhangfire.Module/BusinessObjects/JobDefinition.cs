@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using DevExpress.ExpressApp.DC;
+using DevExpress.ExpressApp.Editors;
 using DevExpress.ExpressApp.Model;
 using DevExpress.Persistent.Base;
 using xafhangfire.Module.Helpers;
@@ -32,6 +33,7 @@ namespace xafhangfire.Module.BusinessObjects
         public virtual string Name { get; set; } = string.Empty;
 
         [System.ComponentModel.DataAnnotations.Required]
+        [EditorAlias("JobTypeNameEditor")]
         public virtual string JobTypeName { get; set; } = string.Empty;
 
         [FieldSize(FieldSizeAttribute.Unlimited)]
