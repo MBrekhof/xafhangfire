@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using DevExpress.ExpressApp.DC;
@@ -33,8 +34,8 @@ namespace xafhangfire.Module.BusinessObjects
         [FieldSize(FieldSizeAttribute.Unlimited)]
         public virtual string Notes { get; set; }
 
-        public virtual IList<Contact> Contacts { get; set; } = new List<Contact>();
+        public virtual IList<Contact> Contacts { get; set; } = new ObservableCollection<Contact>();
 
-        public virtual IList<Project> Projects { get; set; } = new List<Project>();
+        public virtual IList<Project> Projects { get; set; } = new ObservableCollection<Project>();
     }
 }

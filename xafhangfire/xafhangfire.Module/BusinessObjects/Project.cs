@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using DevExpress.ExpressApp.DC;
@@ -41,6 +42,6 @@ namespace xafhangfire.Module.BusinessObjects
 
         public virtual Organization Organization { get; set; }
 
-        public virtual IList<ProjectTask> Tasks { get; set; } = new List<ProjectTask>();
+        public virtual IList<ProjectTask> Tasks { get; set; } = new ObservableCollection<ProjectTask>();
     }
 }
