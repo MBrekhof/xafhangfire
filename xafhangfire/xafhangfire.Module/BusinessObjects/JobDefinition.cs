@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using DevExpress.ExpressApp.DC;
+using DevExpress.ExpressApp.Model;
 using DevExpress.Persistent.Base;
 using xafhangfire.Module.Helpers;
 
@@ -27,10 +28,10 @@ namespace xafhangfire.Module.BusinessObjects
         [VisibleInDetailView(false), VisibleInListView(false)]
         public virtual Guid Id { get; set; } = Guid.NewGuid();
 
-        [Required]
+        [System.ComponentModel.DataAnnotations.Required]
         public virtual string Name { get; set; } = string.Empty;
 
-        [Required]
+        [System.ComponentModel.DataAnnotations.Required]
         public virtual string JobTypeName { get; set; } = string.Empty;
 
         [FieldSize(FieldSizeAttribute.Unlimited)]
@@ -54,10 +55,12 @@ namespace xafhangfire.Module.BusinessObjects
 
         [VisibleInDetailView(true), VisibleInListView(true)]
         [EditorBrowsable(EditorBrowsableState.Never)]
+        [ModelDefault("DisplayFormat", "yyyy-MM-dd HH:mm:ss")]
         public virtual DateTime? LastRunUtc { get; set; }
 
         [VisibleInDetailView(true), VisibleInListView(true)]
         [EditorBrowsable(EditorBrowsableState.Never)]
+        [ModelDefault("DisplayFormat", "yyyy-MM-dd HH:mm:ss")]
         public virtual DateTime? NextRunUtc { get; set; }
 
         [VisibleInDetailView(true), VisibleInListView(true)]
@@ -66,6 +69,7 @@ namespace xafhangfire.Module.BusinessObjects
 
         [FieldSize(FieldSizeAttribute.Unlimited)]
         [VisibleInListView(false)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public virtual string LastRunMessage { get; set; }
 
         public virtual int ConsecutiveFailures { get; set; }

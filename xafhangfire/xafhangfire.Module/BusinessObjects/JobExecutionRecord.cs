@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using DevExpress.ExpressApp.DC;
+using DevExpress.ExpressApp.Model;
 using DevExpress.Persistent.Base;
 
 namespace xafhangfire.Module.BusinessObjects
@@ -19,14 +20,17 @@ namespace xafhangfire.Module.BusinessObjects
 
         public virtual string JobTypeName { get; set; } = string.Empty;
 
+        [ModelDefault("DisplayFormat", "yyyy-MM-dd HH:mm:ss")]
         public virtual DateTime StartedUtc { get; set; }
 
+        [ModelDefault("DisplayFormat", "yyyy-MM-dd HH:mm:ss")]
         public virtual DateTime? CompletedUtc { get; set; }
 
         public virtual JobRunStatus Status { get; set; } = JobRunStatus.Running;
 
         [FieldSize(FieldSizeAttribute.Unlimited)]
         [VisibleInListView(false)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public virtual string ErrorMessage { get; set; }
 
         public virtual long DurationMs { get; set; }
@@ -37,6 +41,7 @@ namespace xafhangfire.Module.BusinessObjects
 
         [FieldSize(FieldSizeAttribute.Unlimited)]
         [VisibleInListView(false)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public virtual string ParametersJson { get; set; }
 
         public virtual JobDefinition JobDefinition { get; set; }
