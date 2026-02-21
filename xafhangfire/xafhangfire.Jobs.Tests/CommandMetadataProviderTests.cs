@@ -75,4 +75,57 @@ public class CommandMetadataProviderTests
         toParam.IsRequired.Should().BeTrue();
         toParam.ParameterType.Should().Be(typeof(string));
     }
+
+    [Fact]
+    public void GetMetadata_GenerateReportCommand_ReportNameHasReportsHint()
+    {
+        var metadata = CommandMetadataProvider.GetMetadata(nameof(GenerateReportCommand));
+
+        var reportName = metadata!.First(m => m.Name == "ReportName");
+        reportName.DataSourceHint.Should().Be("Reports");
+    }
+
+    [Fact]
+    public void GetMetadata_GenerateReportCommand_OutputFormatHasStaticHint()
+    {
+        var metadata = CommandMetadataProvider.GetMetadata(nameof(GenerateReportCommand));
+
+        var outputFormat = metadata!.First(m => m.Name == "OutputFormat");
+        outputFormat.DataSourceHint.Should().Be("Pdf,Xlsx");
+    }
+
+    [Fact]
+    public void GetMetadata_SendReportEmailCommand_ReportNameHasReportsHint()
+    {
+        var metadata = CommandMetadataProvider.GetMetadata(nameof(SendReportEmailCommand));
+
+        var reportName = metadata!.First(m => m.Name == "ReportName");
+        reportName.DataSourceHint.Should().Be("Reports");
+    }
+
+    [Fact]
+    public void GetMetadata_SendMailMergeCommand_TemplateNameHasEmailTemplatesHint()
+    {
+        var metadata = CommandMetadataProvider.GetMetadata(nameof(SendMailMergeCommand));
+
+        var templateName = metadata!.First(m => m.Name == "TemplateName");
+        templateName.DataSourceHint.Should().Be("EmailTemplates");
+    }
+
+    [Fact]
+    public void GetMetadata_DemoLogCommand_NoDataSourceHints()
+    {
+        var metadata = CommandMetadataProvider.GetMetadata(nameof(DemoLogCommand));
+
+        metadata!.Should().AllSatisfy(m => m.DataSourceHint.Should().BeNull());
+    }
+
+    [Fact]
+    public void GetMetadata_GenerateReportCommand_ReportParametersHasKeyValueHint()
+    {
+        var metadata = CommandMetadataProvider.GetMetadata(nameof(GenerateReportCommand));
+
+        var reportParams = metadata!.First(m => m.Name == "ReportParameters");
+        reportParams.DataSourceHint.Should().Be("KeyValue");
+    }
 }
