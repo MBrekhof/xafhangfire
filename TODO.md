@@ -20,6 +20,8 @@
 
 **Session 9 (2026-02-21):** Job UI improvements. JobTypeName now renders as a DxComboBox dropdown populated from CommandMetadataProvider. CronDescription and NextScheduledRuns refresh live when CronExpression changes (JobDefinitionRefreshController). DateTime fields (LastRunUtc, NextRunUtc, StartedUtc, CompletedUtc) display with HH:mm:ss via [ModelDefault]. System fields (LastRunMessage, ErrorMessage, ParametersJson) made read-only with [EditorBrowsable]. CommandParameterMetadata extended with DataSourceHint — enables ReportName dropdown (from ReportDataV2 DB), OutputFormat dropdown (Pdf,Xlsx), TemplateName dropdown (from EmailTemplate DB). Dictionary parameters (ReportParameters) render as key-value pair rows with add/remove buttons. 6 new tests (69 total).
 
+**Session 10 (2026-02-21):** Execution record UI cleanup + report parameter auto-discovery + version pinning. ProgressPercent/ProgressMessage hidden from execution record views. All execution record fields made read-only (including JobDefinition nav property). Null values excluded from execution record JSON serialization. Report parameter auto-discovery implemented: when user selects a ReportName, the editor loads the XtraReport and inspects its Parameters collection to pre-populate key-value pairs. DataSourceHint changed from "KeyValue" to "ReportParameters" for report parameter fields. ReportParameterHelper updated with Description-based fallback lookup. DevExpress packages pinned from 25.2.* to 25.2.3. Added explicit PostgreSQL provider references to Win and Blazor.Server projects. Added IDesignTimeDbContextFactory for PostgreSQL Model Editor support. 1 new test (70 total).
+
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
 - [x] DemoLogCommand/Handler + ListUsersCommand/Handler
@@ -96,6 +98,16 @@
 - [x] ReportName dropdown from ReportDataV2.DisplayName, OutputFormat dropdown (Pdf,Xlsx), TemplateName dropdown from EmailTemplate.Name
 - [x] Key-value pair editor for Dictionary parameters (add/remove rows with Key + Value textboxes)
 - [x] 69 tests total (63 previous + 6 DataSourceHint tests)
+- [x] ProgressPercent + ProgressMessage hidden from JobExecutionRecord detail/list views
+- [x] All JobExecutionRecord system fields made read-only (JobName, JobTypeName, StartedUtc, CompletedUtc, Status, DurationMs, JobDefinition)
+- [x] Null values excluded from execution record JSON (JsonIgnoreCondition.WhenWritingNull in DirectJobDispatcher + JobExecutor)
+- [x] Report parameter auto-discovery from XtraReport definitions (DiscoverReportParameters in JobParametersPropertyEditor)
+- [x] DataSourceHint "ReportParameters" (was "KeyValue") for report-specific key-value fields
+- [x] ReportParameterHelper fallback to Description-based parameter lookup
+- [x] DevExpress packages pinned to 25.2.3 (was 25.2.*)
+- [x] Explicit Npgsql.EntityFrameworkCore.PostgreSQL + Microsoft.EntityFrameworkCore.Design in Win and Blazor.Server projects
+- [x] IDesignTimeDbContextFactory (xafhangfireDesignTimeDbContextFactory) for Model Editor PostgreSQL support
+- [x] 70 tests total (69 previous + 1 SendReportEmailCommand hint test)
 
 ## Future
 - [ ] Scheduler calendar view bound to JobDefinition
@@ -188,19 +200,43 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 - Custom property editors use the `BlazorPropertyEditorBase` + `ComponentModelBase` + Razor component pattern. The `ComponentModel` properties must match the Razor component's `[Parameter]` properties by name and type.
 - When adding a new command type, register it in `CommandMetadataProvider.CommandTypes` dictionary — otherwise the parameter editor falls back to raw JSON.
 - The `JobParametersPropertyEditor` subscribes to `INotifyPropertyChanged` on the current object — this works because XAF EF Core entities use `ChangingAndChangedNotificationsWithOriginalValues` change tracking.
+- DevExpress packages are pinned to 25.2.3 (not wildcard). Update all 4 csproj files together when changing versions.
+- Both Win and Blazor.Server need explicit `Npgsql.EntityFrameworkCore.PostgreSQL` and `Microsoft.EntityFrameworkCore.Design` references — transitive deps from Module aren't enough for XAF Model Editor design-time.
+- XtraReport `Parameter.Name` may be empty for some reports — `DiscoverReportParameters` falls back to `Description`. Debug with breakpoints if keys still empty.
+- `[System.ComponentModel.DataAnnotations.Required]` must be fully qualified in Module project — conflicts with `DevExpress.ExpressApp.Model.RequiredAttribute` when both usings are present.
 
-## Handoff Notes (Session 9 → Next Session)
+## Handoff Notes (Session 10 → Next Session)
 
-**Status:** All code committed on `master` (`2e8f603`). Session 9 added 6 UI improvements. User should test manually.
+**Status:** All code committed and pushed on `master` (`edbd1ae`). Session 10 addressed user testing feedback + infra fixes.
 
-**What to test:**
-- JobTypeName renders as a dropdown (DxComboBox) with all registered command types
-- Selecting a command type refreshes the parameter form immediately (no close/reopen)
-- CronDescription and NextScheduledRuns update live when editing CronExpression
-- DateTime fields show hours/minutes/seconds in list and detail views
-- LastRunMessage, ErrorMessage, ParametersJson (on execution records) are read-only
-- GenerateReportCommand/SendReportEmailCommand show ReportName as a dropdown from DB
-- OutputFormat shows as Pdf/Xlsx dropdown
-- SendMailMergeCommand shows TemplateName as a dropdown from DB
-- ReportParameters renders as key-value pair rows (add/remove/edit)
-- Saving correctly serializes all field types back to ParametersJson
+**Open issues to debug manually next session:**
+
+1. **XAF Model Editor still fails** — Added `IDesignTimeDbContextFactory` with `UseNpgsql()` and direct PostgreSQL provider references to Win/Blazor.Server projects, but the error persists. The factory is in `xafhangfireDbContext.cs`. May need to:
+   - Verify the factory is being found by the Model Editor (check assembly scanning)
+   - Try adding `Microsoft.EntityFrameworkCore.Proxies` to the Win project (for `UseChangeTrackingProxies`/`UseObjectSpaceLinkProxies`)
+   - Check if XAF's `DesignTimeDbContextCreator` overrides the standard `IDesignTimeDbContextFactory`
+   - Close and reopen Visual Studio after the csproj changes
+
+2. **Report parameter auto-discovery: key names are empty** — The editor correctly discovers the right NUMBER of parameters from XtraReport definitions, but `Parameter.Name` comes back empty. Added `Description` fallback but still not working. Next steps:
+   - Add temporary debug logging or a breakpoint in `DiscoverReportParameters()` to inspect what `p.Name`, `p.Description`, and `p.Value` actually contain
+   - Check the XtraReport design files to see how parameters are defined (Name vs Description)
+   - Try iterating with `for (int i = 0; i < report.Parameters.Count; i++)` and inspect via index
+   - Consider using `ToString()` or reflection to dump all Parameter properties
+   - Test with a simple report that has a manually-defined parameter with an explicit Name
+
+**What was verified working (from user testing):**
+- JobTypeName dropdown works
+- Report parameter auto-discovery finds the correct number of parameters
+- Execution record fields are read-only
+- Null values excluded from JSON serialization
+- DateTime display formats with HH:mm:ss
+
+**Key files changed in session 10:**
+- `xafhangfire.Module/BusinessObjects/JobExecutionRecord.cs` — hidden progress fields, read-only system fields
+- `xafhangfire.Module/BusinessObjects/xafhangfireDbContext.cs` — added IDesignTimeDbContextFactory
+- `xafhangfire.Blazor.Server/Editors/JobParametersPropertyEditor.cs` — report parameter auto-discovery + ReportName change detection
+- `xafhangfire.Blazor.Server/Handlers/ReportParameterHelper.cs` — Description fallback for parameter lookup
+- `xafhangfire.Jobs/CommandMetadataProvider.cs` — "KeyValue" → "ReportParameters" hint
+- `xafhangfire.Jobs.Tests/CommandMetadataProviderTests.cs` — updated hint tests
+- All 4 project csproj files — pinned DevExpress to 25.2.3, added explicit PostgreSQL provider to UI projects
+- `xafhangfire.Jobs/DirectJobDispatcher.cs` + `JobExecutor.cs` — WhenWritingNull JSON option
