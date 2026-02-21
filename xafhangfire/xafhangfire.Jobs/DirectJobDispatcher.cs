@@ -17,6 +17,11 @@ public sealed class DirectJobDispatcher(
             typeof(TCommand).Name);
 
         using var scope = scopeFactory.CreateScope();
+
+        var initializer = scope.ServiceProvider.GetService<IJobScopeInitializer>();
+        if (initializer != null)
+            await initializer.InitializeAsync(cancellationToken);
+
         var handler = scope.ServiceProvider.GetRequiredService<IJobHandler<TCommand>>();
         await handler.ExecuteAsync(command, cancellationToken);
     }

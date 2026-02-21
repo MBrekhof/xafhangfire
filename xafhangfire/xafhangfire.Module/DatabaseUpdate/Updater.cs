@@ -36,6 +36,7 @@ namespace xafhangfire.Module.DatabaseUpdate
             // If a role doesn't exist in the database, create this role
             var defaultRole = CreateDefaultRole();
             var adminRole = CreateAdminRole();
+            var backgroundJobsRole = CreateBackgroundJobsRole();
 
             ObjectSpace.CommitChanges(); //This line persists created object(s).
 
@@ -62,6 +63,16 @@ namespace xafhangfire.Module.DatabaseUpdate
                 {
                     // Add the Administrators role to the user
                     user.Roles.Add(adminRole);
+                });
+            }
+
+            // Service user for background Hangfire jobs (read-only access)
+            if (userManager.FindUserByName<ApplicationUser>(ObjectSpace, "HangfireJob") == null)
+            {
+                string EmptyPassword = "";
+                _ = userManager.CreateUser<ApplicationUser>(ObjectSpace, "HangfireJob", EmptyPassword, (user) =>
+                {
+                    user.Roles.Add(backgroundJobsRole);
                 });
             }
 
@@ -381,6 +392,26 @@ namespace xafhangfire.Module.DatabaseUpdate
 <p>Please review the latest project activities and reach out if you have any questions.</p>
 <p>Best regards,<br/>The XAF Hangfire Team</p>";
             statusUpdate.Description = "Periodic status update sent to contacts about their organization's projects.";
+        }
+
+        PermissionPolicyRole CreateBackgroundJobsRole()
+        {
+            PermissionPolicyRole role = ObjectSpace.FirstOrDefault<PermissionPolicyRole>(r => r.Name == "BackgroundJobs");
+            if (role == null)
+            {
+                role = ObjectSpace.CreateObject<PermissionPolicyRole>();
+                role.Name = "BackgroundJobs";
+
+                // Read-only access to types needed by report generation and data queries
+                role.AddTypePermissionsRecursively<ReportDataV2>(SecurityOperations.ReadOnlyAccess, SecurityPermissionState.Allow);
+                role.AddTypePermissionsRecursively<Organization>(SecurityOperations.ReadOnlyAccess, SecurityPermissionState.Allow);
+                role.AddTypePermissionsRecursively<Contact>(SecurityOperations.ReadOnlyAccess, SecurityPermissionState.Allow);
+                role.AddTypePermissionsRecursively<Project>(SecurityOperations.ReadOnlyAccess, SecurityPermissionState.Allow);
+                role.AddTypePermissionsRecursively<ProjectTask>(SecurityOperations.ReadOnlyAccess, SecurityPermissionState.Allow);
+                role.AddTypePermissionsRecursively<JobDefinition>(SecurityOperations.ReadOnlyAccess, SecurityPermissionState.Allow);
+                role.AddTypePermissionsRecursively<EmailTemplate>(SecurityOperations.ReadOnlyAccess, SecurityPermissionState.Allow);
+            }
+            return role;
         }
 
         PermissionPolicyRole CreateDefaultRole()

@@ -248,6 +248,9 @@ namespace xafhangfire.Blazor.Server
                 services.AddTransient<IEmailSender, LogOnlyEmailSender>();
             }
 
+            // Job scope initializer — authenticates as HangfireJob user in background scopes
+            services.AddScoped<IJobScopeInitializer, xafhangfire.Blazor.Server.Services.XafJobScopeInitializer>();
+
             // Job dispatcher + handlers
             services.AddJobDispatcher(Configuration);
             services.AddJobHandler<DemoLogCommand, DemoLogHandler>();

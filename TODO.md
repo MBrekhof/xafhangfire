@@ -10,7 +10,7 @@
 
 **Session 4 (2026-02-19):** Email Jobs implemented with MailKit. Three commands: SendEmail, SendReportEmail (report as attachment), SendMailMerge (template + CRM contacts). IEmailSender with SmtpEmailSender/LogOnlyEmailSender toggle. EmailTemplate XAF entity with placeholder syntax.
 
-**Session 5 (2026-02-21):** Migrated application database from SQL Server LocalDB to PostgreSQL 16 in Docker. Consolidated app DB and Hangfire storage into single PostgreSQL instance (`xafhangfire-postgres` container, port 5433). Added docker-compose.yml. Fixed pre-existing ObservableCollection bug in CRM entities.
+**Session 5 (2026-02-21):** Migrated application database from SQL Server LocalDB to PostgreSQL 16 in Docker. Consolidated app DB and Hangfire storage into single PostgreSQL instance (`xafhangfire-postgres` container, port 5433). Added docker-compose.yml. Fixed pre-existing ObservableCollection bug in CRM entities. Fixed DI scoping bug (DirectJobDispatcher uses IServiceScopeFactory). Added Serilog structured logging. Fixed XAF security context for background Hangfire jobs (IJobScopeInitializer + HangfireJob service user).
 
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
@@ -46,6 +46,10 @@
 - [x] Hangfire consolidated into same PostgreSQL database (shared ConnectionString)
 - [x] Npgsql legacy timestamp behavior enabled for XAF DateTime compatibility
 - [x] Fixed ObservableCollection bug in Organization/Project navigation properties
+- [x] Fixed DI scoping bug — DirectJobDispatcher uses IServiceScopeFactory (not root IServiceProvider)
+- [x] Serilog structured logging (console + rolling file at `logs/xafhangfire-YYYYMMDD.log`)
+- [x] IJobScopeInitializer — authenticates HangfireJob service user in background job scopes
+- [x] HangfireJob user + BackgroundJobs role (read-only access for report generation)
 
 ## Next Session: Priority Order
 
@@ -103,6 +107,9 @@ When resuming this project, read these files first:
 15. `docs/plans/2026-02-19-email-jobs-design.md` — email jobs design doc
 16. `docker-compose.yml` — PostgreSQL 16 container definition
 17. `docs/plans/2026-02-21-postgresql-migration-design.md` — PostgreSQL migration design
+18. `xafhangfire/xafhangfire.Jobs/IJobScopeInitializer.cs` — scope initialization interface
+19. `xafhangfire/xafhangfire.Blazor.Server/Services/XafJobScopeInitializer.cs` — XAF auth for background jobs
+20. `docs/plans/2026-02-21-hangfire-auth-fix-design.md` — background auth fix design
 
 Then check the TODO list above to see what's done and what's next.
 
@@ -117,3 +124,4 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 - Navigation collections MUST use `ObservableCollection<T>` (not `List<T>`) due to `ChangingAndChangedNotificationsWithOriginalValues` change tracking strategy.
 - PostgreSQL requires `Npgsql.EnableLegacyTimestampBehavior = true` for XAF's `DateTime` properties (set in Startup.cs).
 - Connection strings use `EFCoreProvider=PostgreSql;` prefix for XAF auto-detection. Hangfire needs this prefix stripped (see `StripEFCoreProvider` in Startup.cs).
+- Background Hangfire jobs need `IJobScopeInitializer` to authenticate as "HangfireJob" user — without it, handlers using `IReportExportService` or `IObjectSpaceFactory` fail with "The user name must not be empty".
