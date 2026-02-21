@@ -49,4 +49,17 @@ namespace xafhangfire.Module.BusinessObjects
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }
+
+    // This factory creates DbContext for design-time services (Model Editor, database migrations).
+    public class xafhangfireDesignTimeDbContextFactory : IDesignTimeDbContextFactory<xafhangfireEFCoreDbContext>
+    {
+        public xafhangfireEFCoreDbContext CreateDbContext(string[] args)
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<xafhangfireEFCoreDbContext>();
+            optionsBuilder.UseNpgsql("Host=localhost;Port=5433;Database=xafhangfire;Username=xafhangfire;Password=xafhangfire");
+            optionsBuilder.UseChangeTrackingProxies();
+            optionsBuilder.UseObjectSpaceLinkProxies();
+            return new xafhangfireEFCoreDbContext(optionsBuilder.Options);
+        }
+    }
 }
