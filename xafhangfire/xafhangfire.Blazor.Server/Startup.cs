@@ -40,6 +40,8 @@ namespace xafhangfire.Blazor.Server
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
             services.AddSingleton(typeof(Microsoft.AspNetCore.SignalR.HubConnectionHandler<>), typeof(ProxyHubConnectionHandler<>));
 
             services.AddRazorPages();
@@ -215,8 +217,8 @@ namespace xafhangfire.Blazor.Server
                 o.JsonSerializerOptions.PropertyNamingPolicy = null;
             });
 
-            // Hangfire
-            var hangfireConnectionString = Configuration.GetConnectionString("HangfireConnection");
+            // Hangfire — uses same PostgreSQL database as the application
+            var hangfireConnectionString = StripEFCoreProvider(Configuration.GetConnectionString("ConnectionString"));
             services.AddHangfire(config =>
             {
                 config
@@ -292,6 +294,19 @@ namespace xafhangfire.Blazor.Server
                 endpoints.MapFallbackToPage("/_Host");
                 endpoints.MapControllers();
             });
+        }
+        private static string StripEFCoreProvider(string connectionString)
+        {
+            if (string.IsNullOrEmpty(connectionString))
+                return connectionString;
+
+            // Remove the "EFCoreProvider=PostgreSql;" prefix that XAF uses for provider detection
+            // Hangfire.PostgreSql needs a raw Npgsql connection string without this prefix
+            return System.Text.RegularExpressions.Regex.Replace(
+                connectionString,
+                @"EFCoreProvider\s*=\s*[^;]+;\s*",
+                "",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         }
     }
 }
