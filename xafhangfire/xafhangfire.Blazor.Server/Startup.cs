@@ -248,6 +248,9 @@ namespace xafhangfire.Blazor.Server
                 services.AddTransient<IEmailSender, LogOnlyEmailSender>();
             }
 
+            // Report output options
+            services.Configure<ReportOutputOptions>(Configuration.GetSection("Reports"));
+
             // Job scope initializer — authenticates as HangfireJob user in background scopes
             services.AddScoped<IJobScopeInitializer, xafhangfire.Blazor.Server.Services.XafJobScopeInitializer>();
 

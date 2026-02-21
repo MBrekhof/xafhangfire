@@ -4,6 +4,7 @@ using DevExpress.Persistent.BaseImpl.EF;
 using DevExpress.XtraPrinting;
 using DevExpress.XtraReports.UI;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using xafhangfire.Jobs;
 using xafhangfire.Jobs.Commands;
 
@@ -11,6 +12,7 @@ namespace xafhangfire.Blazor.Server.Handlers;
 
 public sealed class GenerateReportHandler(
     IReportExportService reportExportService,
+    IOptions<ReportOutputOptions> reportOptions,
     ILogger<GenerateReportHandler> logger) : IJobHandler<GenerateReportCommand>
 {
     public async Task ExecuteAsync(
@@ -27,8 +29,7 @@ public sealed class GenerateReportHandler(
 
         var outputPath = command.OutputPath
             ?? Path.Combine(
-                Directory.GetCurrentDirectory(),
-                "reports",
+                ResolveOutputDirectory(),
                 $"{command.ReportName}.{command.OutputFormat.ToLowerInvariant()}");
 
         var outputDir = Path.GetDirectoryName(outputPath)!;
@@ -47,5 +48,11 @@ public sealed class GenerateReportHandler(
 
         logger.LogInformation("Report '{ReportName}' exported to {Path}",
             command.ReportName, outputPath);
+    }
+
+    private string ResolveOutputDirectory()
+    {
+        var dir = reportOptions.Value.OutputDirectory;
+        return Path.IsPathRooted(dir) ? dir : Path.Combine(Directory.GetCurrentDirectory(), dir);
     }
 }

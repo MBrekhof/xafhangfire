@@ -3,6 +3,7 @@ using DevExpress.ExpressApp.ReportsV2;
 using DevExpress.Persistent.BaseImpl.EF;
 using DevExpress.XtraPrinting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using xafhangfire.Jobs;
 using xafhangfire.Jobs.Commands;
 
@@ -11,6 +12,7 @@ namespace xafhangfire.Blazor.Server.Handlers;
 public sealed class SendReportEmailHandler(
     IReportExportService reportExportService,
     IEmailSender emailSender,
+    IOptions<ReportOutputOptions> reportOptions,
     ILogger<SendReportEmailHandler> logger) : IJobHandler<SendReportEmailCommand>
 {
     public async Task ExecuteAsync(
@@ -20,13 +22,15 @@ public sealed class SendReportEmailHandler(
         logger.LogInformation("Generating report '{ReportName}' for email delivery to '{Recipients}'",
             command.ReportName, command.Recipients);
 
-        // Export report to temp file
+        // Export report to configured output directory
         using var report = reportExportService.LoadReport<ReportDataV2>(
             r => r.DisplayName == command.ReportName);
         reportExportService.SetupReport(report);
 
         var extension = command.OutputFormat.ToLowerInvariant();
-        var tempPath = Path.Combine(Path.GetTempPath(), $"{command.ReportName}.{extension}");
+        var outputDir = ResolveOutputDirectory();
+        Directory.CreateDirectory(outputDir);
+        var tempPath = Path.Combine(outputDir, $"{command.ReportName}.{extension}");
 
         var exportTarget = extension switch
         {
@@ -57,11 +61,13 @@ public sealed class SendReportEmailHandler(
                 cancellationToken);
         }
 
-        // Cleanup temp file
-        try { File.Delete(tempPath); }
-        catch (Exception ex) { logger.LogWarning(ex, "Failed to delete temp report file: {Path}", tempPath); }
-
         logger.LogInformation("Report '{ReportName}' emailed to '{Recipients}'",
             command.ReportName, command.Recipients);
+    }
+
+    private string ResolveOutputDirectory()
+    {
+        var dir = reportOptions.Value.OutputDirectory;
+        return Path.IsPathRooted(dir) ? dir : Path.Combine(Directory.GetCurrentDirectory(), dir);
     }
 }
