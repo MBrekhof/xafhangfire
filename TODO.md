@@ -16,6 +16,8 @@
 
 **Session 7 (2026-02-21):** Job progress reporting (IJobProgressReporter interface, XafJobProgressReporter implementation, DemoLogHandler reports progress during loop). Consecutive failure tracking (ConsecutiveFailures counter on JobDefinition, reset on success, incremented on failure, warning logged at configurable threshold).
 
+**Session 8 (2026-02-21):** Cron expression visualization and rich parameter UI. CronHelper uses Cronos (next occurrences) + CronExpressionDescriptor (human-readable text). Two [NotMapped] computed properties on JobDefinition (CronDescription, NextScheduledRuns). CommandMetadataProvider reflects on command record constructors to discover parameters. Custom XAF Blazor property editor (JobParametersPropertyEditor) replaces raw JSON textarea with typed form fields (DxTextBox, DxSpinEdit, DxCheckBox, DxMemo). Falls back to raw JSON for unknown types. Refreshes on JobTypeName change. 19 new tests (63 total).
+
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
 - [x] DemoLogCommand/Handler + ListUsersCommand/Handler
@@ -75,11 +77,18 @@
 - [x] XafJobExecutionRecorder updates JobDefinition status (LastRunUtc, LastRunStatus, LastRunMessage) on completion/failure
 - [x] Configurable failure alert threshold (`Jobs:FailureAlertThreshold` in appsettings.json, default: 3)
 - [x] Warning logged when consecutive failures reach threshold
+- [x] CronHelper static class (Cronos + CronExpressionDescriptor) — human-readable cron descriptions and next 5 run times
+- [x] CronDescription + NextScheduledRuns [NotMapped] computed properties on JobDefinition
+- [x] CommandParameterMetadata record + CommandMetadataProvider — reflection-based parameter discovery from command records
+- [x] JobParametersPropertyEditor — custom XAF Blazor property editor with typed form fields (DxTextBox, DxSpinEdit, DxCheckBox, DxMemo)
+- [x] JobParametersFormModel + JobParametersForm.razor — ComponentModelBase pattern for XAF Blazor rendering
+- [x] EditorAlias("JobParametersEditor") on ParametersJson — connects to custom property editor
+- [x] JobTypeName change detection via INotifyPropertyChanged — refreshes parameter form dynamically
+- [x] Falls back to raw JSON textarea for unknown command types
+- [x] 63 tests total (44 original + 13 CronHelper + 6 CommandMetadataProvider)
 
 ## Future
 - [ ] Scheduler calendar view bound to JobDefinition
-- [ ] Cron expression → next-run visualization
-- [ ] Rich parameter UI (dynamic forms from command metadata)
 - [ ] Expand test coverage (Blazor.Server handlers with mocked IReportExportService, integration tests)
 - [ ] Real-time progress UI (SignalR push of progress updates to XAF detail view)
 - [ ] Email notifications on repeated failures (extend failure tracking to send alert emails)
@@ -94,6 +103,10 @@
 - Hangfire dashboard auth uses ASP.NET Core `HttpContext` claims, not XAF security — dashboard is middleware-level.
 - Progress reporting is opt-in — handlers accept `IJobProgressReporter` via constructor injection, executors initialize it with the record ID.
 - Consecutive failure tracking updates `JobDefinition` inline during recording — no separate background process needed.
+- Cron visualization uses two NuGet packages — Cronos for computing next occurrences, CronExpressionDescriptor for human-readable text. Both in Module project.
+- Command metadata uses reflection on record constructors — registry dictionary maps string names to types. New commands need to be registered in `CommandMetadataProvider`.
+- Custom property editor pattern — `BlazorPropertyEditorBase` + `ComponentModelBase` + Razor component. EditorAlias connects entity property to editor class.
+- Parameter editor subscribes to `INotifyPropertyChanged` on the current object to detect `JobTypeName` changes and refresh the form dynamically.
 
 ## Claude Continuation Instructions
 
@@ -129,6 +142,13 @@ When resuming this project, read these files first:
 28. `xafhangfire/xafhangfire.Jobs/NullJobProgressReporter.cs` — no-op progress reporter
 29. `xafhangfire/xafhangfire.Blazor.Server/Services/XafJobProgressReporter.cs` — XAF progress reporter implementation
 30. `docs/plans/2026-02-21-progress-and-error-notifications-design.md` — progress + failure tracking design
+31. `xafhangfire/xafhangfire.Module/Helpers/CronHelper.cs` — cron description + next runs helper
+32. `xafhangfire/xafhangfire.Jobs/CommandMetadataProvider.cs` — reflection-based command parameter discovery
+33. `xafhangfire/xafhangfire.Jobs/CommandParameterMetadata.cs` — parameter metadata record
+34. `xafhangfire/xafhangfire.Blazor.Server/Editors/JobParametersPropertyEditor.cs` — custom XAF Blazor property editor
+35. `xafhangfire/xafhangfire.Blazor.Server/Editors/JobParametersFormModel.cs` — component model for parameter editor
+36. `xafhangfire/xafhangfire.Blazor.Server/Editors/JobParametersForm.razor` — Razor component for parameter form
+37. `docs/plans/2026-02-21-cron-and-parameter-ui-design.md` — cron + parameter UI design doc
 
 Then check the TODO list above to see what's done and what's next.
 

@@ -15,6 +15,8 @@ This project demonstrates a **Command/Handler + Pluggable Dispatcher** pattern t
 - **Job progress reporting** — opt-in progress updates (percent + message) for long-running handlers
 - **Failure tracking** — consecutive failure counter with configurable alert threshold
 - **Hangfire dashboard** — role-based access control (Administrators only in production)
+- **Cron visualization** — human-readable cron descriptions + next 5 scheduled run times
+- **Rich parameter UI** — dynamic typed form fields from command record reflection (replaces raw JSON)
 - **Admin UI** — XAF auto-generated CRUD views for JobDefinitions, templates, CRM entities
 - **Background auth** — HangfireJob service user for secured object space access
 
@@ -226,6 +228,7 @@ See [docs/integration-guide.md](docs/integration-guide.md) for integrating this 
 | [docs/plans/2026-02-21-postgresql-migration-design.md](docs/plans/2026-02-21-postgresql-migration-design.md) | PostgreSQL migration design |
 | [docs/plans/2026-02-21-hangfire-auth-fix-design.md](docs/plans/2026-02-21-hangfire-auth-fix-design.md) | Background job auth fix |
 | [docs/plans/2026-02-21-progress-and-error-notifications-design.md](docs/plans/2026-02-21-progress-and-error-notifications-design.md) | Progress reporting + failure tracking |
+| [docs/plans/2026-02-21-cron-and-parameter-ui-design.md](docs/plans/2026-02-21-cron-and-parameter-ui-design.md) | Cron visualization + rich parameter UI |
 
 ## Status
 
