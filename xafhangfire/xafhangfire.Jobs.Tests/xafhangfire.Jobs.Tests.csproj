@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\xafhangfire.Jobs\xafhangfire.Jobs.csproj" />
+    <ProjectReference Include="..\xafhangfire.Module\xafhangfire.Module.csproj" />
   </ItemGroup>
 
 </Project>

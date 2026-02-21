@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using DevExpress.ExpressApp.DC;
 using DevExpress.Persistent.Base;
+using xafhangfire.Module.Helpers;
 
 namespace xafhangfire.Module.BusinessObjects
 {
@@ -36,6 +38,17 @@ namespace xafhangfire.Module.BusinessObjects
         public virtual string ParametersJson { get; set; }
 
         public virtual string CronExpression { get; set; }
+
+        [NotMapped]
+        [VisibleInListView(false)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public string CronDescription => CronHelper.GetDescription(CronExpression);
+
+        [NotMapped]
+        [FieldSize(FieldSizeAttribute.Unlimited)]
+        [VisibleInListView(false)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public string NextScheduledRuns => CronHelper.FormatNextRuns(CronExpression, 5);
 
         public virtual bool IsEnabled { get; set; } = true;
 
