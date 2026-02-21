@@ -18,6 +18,8 @@
 
 **Session 8 (2026-02-21):** Cron expression visualization and rich parameter UI. CronHelper uses Cronos (next occurrences) + CronExpressionDescriptor (human-readable text). Two [NotMapped] computed properties on JobDefinition (CronDescription, NextScheduledRuns). CommandMetadataProvider reflects on command record constructors to discover parameters. Custom XAF Blazor property editor (JobParametersPropertyEditor) replaces raw JSON textarea with typed form fields (DxTextBox, DxSpinEdit, DxCheckBox, DxMemo). Falls back to raw JSON for unknown types. Refreshes on JobTypeName change. 19 new tests (63 total).
 
+**Session 9 (2026-02-21):** Job UI improvements. JobTypeName now renders as a DxComboBox dropdown populated from CommandMetadataProvider. CronDescription and NextScheduledRuns refresh live when CronExpression changes (JobDefinitionRefreshController). DateTime fields (LastRunUtc, NextRunUtc, StartedUtc, CompletedUtc) display with HH:mm:ss via [ModelDefault]. System fields (LastRunMessage, ErrorMessage, ParametersJson) made read-only with [EditorBrowsable]. CommandParameterMetadata extended with DataSourceHint — enables ReportName dropdown (from ReportDataV2 DB), OutputFormat dropdown (Pdf,Xlsx), TemplateName dropdown (from EmailTemplate DB). Dictionary parameters (ReportParameters) render as key-value pair rows with add/remove buttons. 6 new tests (69 total).
+
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
 - [x] DemoLogCommand/Handler + ListUsersCommand/Handler
@@ -86,6 +88,14 @@
 - [x] JobTypeName change detection via INotifyPropertyChanged — refreshes parameter form dynamically
 - [x] Falls back to raw JSON textarea for unknown command types
 - [x] 63 tests total (44 original + 13 CronHelper + 6 CommandMetadataProvider)
+- [x] JobTypeNamePropertyEditor — DxComboBox dropdown for JobTypeName, populated from CommandMetadataProvider.GetRegisteredTypeNames()
+- [x] JobDefinitionRefreshController — live refresh of CronDescription + NextScheduledRuns when CronExpression changes
+- [x] [ModelDefault("DisplayFormat", "yyyy-MM-dd HH:mm:ss")] on LastRunUtc, NextRunUtc (JobDefinition) and StartedUtc, CompletedUtc (JobExecutionRecord)
+- [x] System fields made read-only: LastRunMessage (JobDefinition), ErrorMessage + ParametersJson (JobExecutionRecord)
+- [x] DataSourceHint on CommandParameterMetadata — drives dropdown and key-value editor selection
+- [x] ReportName dropdown from ReportDataV2.DisplayName, OutputFormat dropdown (Pdf,Xlsx), TemplateName dropdown from EmailTemplate.Name
+- [x] Key-value pair editor for Dictionary parameters (add/remove rows with Key + Value textboxes)
+- [x] 69 tests total (63 previous + 6 DataSourceHint tests)
 
 ## Future
 - [ ] Scheduler calendar view bound to JobDefinition
@@ -107,6 +117,10 @@
 - Command metadata uses reflection on record constructors — registry dictionary maps string names to types. New commands need to be registered in `CommandMetadataProvider`.
 - Custom property editor pattern — `BlazorPropertyEditorBase` + `ComponentModelBase` + Razor component. EditorAlias connects entity property to editor class.
 - Parameter editor subscribes to `INotifyPropertyChanged` on the current object to detect `JobTypeName` changes and refresh the form dynamically.
+- `DataSourceHint` on `CommandParameterMetadata` drives UI rendering: "Reports" and "EmailTemplates" query the DB for dropdown items, "Pdf,Xlsx" splits as static values, "KeyValue" renders add/remove key-value rows.
+- `JobTypeNamePropertyEditor` uses same `BlazorPropertyEditorBase` + `ComponentModelBase` + Razor pattern as the parameter editor.
+- `JobDefinitionRefreshController` listens to `ObjectSpace.ObjectChanged` — only fires for `CronExpression` changes, calls `View.FindItem().Refresh()` on computed properties.
+- `IComplexViewItem` pattern used in `JobParametersPropertyEditor` to access `XafApplication` for creating ObjectSpaces needed by DB-backed dropdown queries.
 
 ## Claude Continuation Instructions
 
@@ -149,6 +163,11 @@ When resuming this project, read these files first:
 35. `xafhangfire/xafhangfire.Blazor.Server/Editors/JobParametersFormModel.cs` — component model for parameter editor
 36. `xafhangfire/xafhangfire.Blazor.Server/Editors/JobParametersForm.razor` — Razor component for parameter form
 37. `docs/plans/2026-02-21-cron-and-parameter-ui-design.md` — cron + parameter UI design doc
+38. `xafhangfire/xafhangfire.Blazor.Server/Editors/JobTypeNamePropertyEditor.cs` — JobTypeName dropdown property editor
+39. `xafhangfire/xafhangfire.Blazor.Server/Editors/JobTypeNameComboBoxModel.cs` — component model for JobTypeName dropdown
+40. `xafhangfire/xafhangfire.Blazor.Server/Editors/JobTypeNameComboBox.razor` — Razor component for JobTypeName dropdown
+41. `xafhangfire/xafhangfire.Blazor.Server/Controllers/JobDefinitionRefreshController.cs` — live refresh of computed properties
+42. `docs/plans/2026-02-21-job-ui-improvements-plan.md` — job UI improvements plan
 
 Then check the TODO list above to see what's done and what's next.
 
@@ -170,13 +189,18 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 - When adding a new command type, register it in `CommandMetadataProvider.CommandTypes` dictionary — otherwise the parameter editor falls back to raw JSON.
 - The `JobParametersPropertyEditor` subscribes to `INotifyPropertyChanged` on the current object — this works because XAF EF Core entities use `ChangingAndChangedNotificationsWithOriginalValues` change tracking.
 
-## Handoff Notes (Session 8 → Next Session)
+## Handoff Notes (Session 9 → Next Session)
 
-**Status:** All code committed and pushed to `origin/master` (`f0e1fd0`). User is testing the cron visualization and rich parameter UI features.
+**Status:** All code committed on `master` (`2e8f603`). Session 9 added 6 UI improvements. User should test manually.
 
-**What to expect:** User may report bugs from manual testing. If so, use the systematic-debugging skill. Common things to check:
-- CronDescription/NextScheduledRuns display correctly in JobDefinition detail view
-- Parameter editor shows typed fields for known command types (DemoLogCommand, etc.)
-- Parameter editor falls back to raw JSON for unknown types
-- Changing JobTypeName refreshes the parameter form
-- Saving a JobDefinition correctly serializes field values back to ParametersJson
+**What to test:**
+- JobTypeName renders as a dropdown (DxComboBox) with all registered command types
+- Selecting a command type refreshes the parameter form immediately (no close/reopen)
+- CronDescription and NextScheduledRuns update live when editing CronExpression
+- DateTime fields show hours/minutes/seconds in list and detail views
+- LastRunMessage, ErrorMessage, ParametersJson (on execution records) are read-only
+- GenerateReportCommand/SendReportEmailCommand show ReportName as a dropdown from DB
+- OutputFormat shows as Pdf/Xlsx dropdown
+- SendMailMergeCommand shows TemplateName as a dropdown from DB
+- ReportParameters renders as key-value pair rows (add/remove/edit)
+- Saving correctly serializes all field types back to ParametersJson
