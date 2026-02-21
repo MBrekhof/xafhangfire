@@ -121,11 +121,20 @@ public class CommandMetadataProviderTests
     }
 
     [Fact]
-    public void GetMetadata_GenerateReportCommand_ReportParametersHasKeyValueHint()
+    public void GetMetadata_GenerateReportCommand_ReportParametersHasReportParametersHint()
     {
         var metadata = CommandMetadataProvider.GetMetadata(nameof(GenerateReportCommand));
 
         var reportParams = metadata!.First(m => m.Name == "ReportParameters");
-        reportParams.DataSourceHint.Should().Be("KeyValue");
+        reportParams.DataSourceHint.Should().Be("ReportParameters");
+    }
+
+    [Fact]
+    public void GetMetadata_SendReportEmailCommand_ReportParametersHasReportParametersHint()
+    {
+        var metadata = CommandMetadataProvider.GetMetadata(nameof(SendReportEmailCommand));
+
+        var reportParams = metadata!.First(m => m.Name == "ReportParameters");
+        reportParams.DataSourceHint.Should().Be("ReportParameters");
     }
 }

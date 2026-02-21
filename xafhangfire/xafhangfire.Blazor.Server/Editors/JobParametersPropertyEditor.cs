@@ -5,8 +5,10 @@ using DevExpress.ExpressApp.Blazor.Components.Models;
 using DevExpress.ExpressApp.Blazor.Editors;
 using DevExpress.ExpressApp.Editors;
 using DevExpress.ExpressApp.Model;
+using DevExpress.ExpressApp.ReportsV2;
 using DevExpress.Persistent.BaseImpl.EF;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using xafhangfire.Jobs;
 using xafhangfire.Module.BusinessObjects;
 
@@ -35,9 +37,17 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
         var model = new JobParametersFormModel();
         model.RawJsonChanged = EventCallback.Factory.Create<string>(this, json =>
         {
+            var previousReportName = ExtractFieldValue(model.RawJson, "ReportName");
             model.RawJson = json;
             OnControlValueChanged();
             WriteValue();
+
+            // If ReportName changed, refresh fields to auto-discover report parameters
+            var newReportName = ExtractFieldValue(json, "ReportName");
+            if (previousReportName != newReportName && !string.IsNullOrEmpty(newReportName))
+            {
+                RefreshFields(json);
+            }
         });
         return model;
     }
@@ -114,7 +124,7 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
             };
 
             // Determine field type based on DataSourceHint first, then CLR type
-            if (param.DataSourceHint == "KeyValue")
+            if (param.DataSourceHint == "KeyValue" || param.DataSourceHint == "ReportParameters")
             {
                 field.FieldType = "keyvalue";
             }
@@ -178,10 +188,62 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
                 }
             }
 
+            // Auto-discover report parameters when hint is "ReportParameters"
+            if (param.DataSourceHint == "ReportParameters" && field.FieldType == "keyvalue")
+            {
+                var reportName = ExtractReportNameFromValues(values);
+                if (!string.IsNullOrEmpty(reportName))
+                {
+                    var discovered = DiscoverReportParameters(reportName);
+                    if (discovered.Count > 0)
+                    {
+                        // Merge: discovered parameters as base, overlay with existing user values
+                        var existingDict = field.KeyValuePairs
+                            .Where(p => !string.IsNullOrWhiteSpace(p.Key))
+                            .ToDictionary(p => p.Key, p => p.Value);
+
+                        field.KeyValuePairs = discovered.Select(d => new KeyValuePairModel
+                        {
+                            Key = d.Key,
+                            Value = existingDict.TryGetValue(d.Key, out var v) ? v : d.Value
+                        }).ToList();
+                    }
+                }
+            }
+
             fields.Add(field);
         }
 
         ComponentModel.Fields = fields;
+    }
+
+    private List<KeyValuePairModel> DiscoverReportParameters(string reportName)
+    {
+        try
+        {
+            var reportService = application.ServiceProvider.GetService<IReportExportService>();
+            if (reportService == null) return new();
+
+            using var report = reportService.LoadReport<ReportDataV2>(
+                r => r.DisplayName == reportName);
+            reportService.SetupReport(report);
+
+            var pairs = new List<KeyValuePairModel>();
+            foreach (DevExpress.XtraReports.Parameters.Parameter p in report.Parameters)
+            {
+                if (!p.Visible) continue;
+                pairs.Add(new KeyValuePairModel
+                {
+                    Key = p.Name,
+                    Value = p.Value?.ToString() ?? string.Empty
+                });
+            }
+            return pairs;
+        }
+        catch
+        {
+            return new();
+        }
     }
 
     private List<string> ResolveDropdownItems(string dataSourceHint)
@@ -244,6 +306,26 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
     {
         if (CurrentObject is JobDefinition jobDef)
             return jobDef.JobTypeName;
+        return null;
+    }
+
+    private static string ExtractReportNameFromValues(Dictionary<string, JsonElement> values)
+    {
+        if (values.TryGetValue("ReportName", out var element) && element.ValueKind == JsonValueKind.String)
+            return element.GetString();
+        return null;
+    }
+
+    private static string ExtractFieldValue(string json, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+            if (dict != null && dict.TryGetValue(fieldName, out var element) && element.ValueKind == JsonValueKind.String)
+                return element.GetString();
+        }
+        catch { }
         return null;
     }
 

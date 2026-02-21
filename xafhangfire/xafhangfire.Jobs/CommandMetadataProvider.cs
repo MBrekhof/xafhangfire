@@ -21,10 +21,10 @@ public static class CommandMetadataProvider
     {
         [("GenerateReportCommand", "ReportName")] = "Reports",
         [("GenerateReportCommand", "OutputFormat")] = "Pdf,Xlsx",
-        [("GenerateReportCommand", "ReportParameters")] = "KeyValue",
+        [("GenerateReportCommand", "ReportParameters")] = "ReportParameters",
         [("SendReportEmailCommand", "ReportName")] = "Reports",
         [("SendReportEmailCommand", "OutputFormat")] = "Pdf,Xlsx",
-        [("SendReportEmailCommand", "ReportParameters")] = "KeyValue",
+        [("SendReportEmailCommand", "ReportParameters")] = "ReportParameters",
         [("SendMailMergeCommand", "TemplateName")] = "EmailTemplates",
     };
 
