@@ -3,4 +3,5 @@ namespace xafhangfire.Jobs.Commands;
 public record GenerateReportCommand(
     string ReportName,
     string OutputFormat = "Pdf",
-    string? OutputPath = null);
+    string? OutputPath = null,
+    Dictionary<string, string>? ReportParameters = null);

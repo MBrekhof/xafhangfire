@@ -8,6 +8,7 @@ using DevExpress.ExpressApp.WebApi.Services;
 using DevExpress.Persistent.Base;
 using DevExpress.Persistent.BaseImpl.EF.PermissionPolicy;
 using Hangfire;
+using Hangfire.Dashboard;
 using Hangfire.InMemory;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -254,6 +255,9 @@ namespace xafhangfire.Blazor.Server
             // Job scope initializer — authenticates as HangfireJob user in background scopes
             services.AddScoped<IJobScopeInitializer, xafhangfire.Blazor.Server.Services.XafJobScopeInitializer>();
 
+            // Job execution recorder — tracks job runs in the database
+            services.AddScoped<IJobExecutionRecorder, xafhangfire.Blazor.Server.Services.XafJobExecutionRecorder>();
+
             // Job dispatcher + handlers
             services.AddJobDispatcher(Configuration);
             services.AddJobHandler<DemoLogCommand, DemoLogHandler>();
@@ -290,7 +294,10 @@ namespace xafhangfire.Blazor.Server
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseHangfireDashboard("/hangfire");
+            app.UseHangfireDashboard("/hangfire", new DashboardOptions
+            {
+                Authorization = new[] { new HangfireDashboardAuthFilter(env.IsDevelopment()) }
+            });
             app.UseAntiforgery();
             app.UseXaf();
             app.UseEndpoints(endpoints =>

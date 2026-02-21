@@ -5,4 +5,5 @@ public record SendReportEmailCommand(
     string Recipients,
     string OutputFormat = "Pdf",
     string? Subject = null,
-    string? BodyText = null);
+    string? BodyText = null,
+    Dictionary<string, string>? ReportParameters = null);

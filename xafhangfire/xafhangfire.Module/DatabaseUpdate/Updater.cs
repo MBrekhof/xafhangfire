@@ -410,6 +410,7 @@ namespace xafhangfire.Module.DatabaseUpdate
                 role.AddTypePermissionsRecursively<ProjectTask>(SecurityOperations.ReadOnlyAccess, SecurityPermissionState.Allow);
                 role.AddTypePermissionsRecursively<JobDefinition>(SecurityOperations.ReadOnlyAccess, SecurityPermissionState.Allow);
                 role.AddTypePermissionsRecursively<EmailTemplate>(SecurityOperations.ReadOnlyAccess, SecurityPermissionState.Allow);
+                role.AddTypePermissionsRecursively<JobExecutionRecord>(SecurityOperations.ReadOnlyAccess, SecurityPermissionState.Allow);
             }
             return role;
         }

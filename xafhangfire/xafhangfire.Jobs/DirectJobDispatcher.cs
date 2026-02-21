@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -22,8 +23,25 @@ public sealed class DirectJobDispatcher(
         if (initializer != null)
             await initializer.InitializeAsync(cancellationToken);
 
-        var handler = scope.ServiceProvider.GetRequiredService<IJobHandler<TCommand>>();
-        await handler.ExecuteAsync(command, cancellationToken);
+        var recorder = scope.ServiceProvider.GetService<IJobExecutionRecorder>();
+        var commandType = typeof(TCommand).Name;
+        string? parametersJson = null;
+        try { parametersJson = JsonSerializer.Serialize(command); } catch { /* best-effort */ }
+
+        var recordId = recorder != null
+            ? await recorder.RecordStartAsync(commandType, commandType, parametersJson, cancellationToken)
+            : Guid.Empty;
+        try
+        {
+            var handler = scope.ServiceProvider.GetRequiredService<IJobHandler<TCommand>>();
+            await handler.ExecuteAsync(command, cancellationToken);
+            if (recorder != null) await recorder.RecordCompletionAsync(recordId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            if (recorder != null) await recorder.RecordFailureAsync(recordId, ex.ToString(), cancellationToken);
+            throw;
+        }
     }
 
     public void Schedule<TCommand>(TCommand command, string cronExpression)

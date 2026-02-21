@@ -12,6 +12,8 @@
 
 **Session 5 (2026-02-21):** Migrated application database from SQL Server LocalDB to PostgreSQL 16 in Docker. Consolidated app DB and Hangfire storage into single PostgreSQL instance (`xafhangfire-postgres` container, port 5433). Added docker-compose.yml. Fixed pre-existing ObservableCollection bug in CRM entities. Fixed DI scoping bug (DirectJobDispatcher uses IServiceScopeFactory). Added Serilog structured logging. Fixed XAF security context for background Hangfire jobs (IJobScopeInitializer + HangfireJob service user). Configurable report output directory via `Reports:OutputDirectory` in appsettings.json.
 
+**Session 6 (2026-02-21):** Report parameters support (Dictionary<string, string> with DateRangeResolver integration). Hangfire dashboard authorization (IDashboardAuthorizationFilter, Administrators-only in production). Job execution history tracking (JobExecutionRecord entity + IJobExecutionRecorder). Updated README with full project documentation. Created integration guide (docs/integration-guide.md).
+
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
 - [x] DemoLogCommand/Handler + ListUsersCommand/Handler
@@ -51,41 +53,32 @@
 - [x] IJobScopeInitializer — authenticates HangfireJob service user in background job scopes
 - [x] HangfireJob user + BackgroundJobs role (read-only access for report generation)
 - [x] Configurable report output directory (`Reports:OutputDirectory` in appsettings.json, `ReportOutputOptions`)
+- [x] Report parameters — `Dictionary<string, string>? ReportParameters` on GenerateReportCommand and SendReportEmailCommand
+- [x] ReportParameterHelper — applies parameters to XtraReport with DateRangeResolver integration and type conversion
+- [x] Hangfire dashboard auth — `HangfireDashboardAuthFilter` (IDashboardAuthorizationFilter), any authenticated user in dev, Administrators only in production
+- [x] JobExecutionRecord entity — tracks every job run with status, duration, error message, parameters snapshot
+- [x] IJobExecutionRecorder interface + XafJobExecutionRecorder implementation (INonSecuredObjectSpaceFactory)
+- [x] JobExecutor and DirectJobDispatcher wired with execution recording (start/complete/fail)
+- [x] JobDefinition → JobExecutionRecord navigation (ObservableCollection)
+- [x] README.md — full project documentation with architecture, setup, configuration, job types
+- [x] Integration guide — `docs/integration-guide.md` with step-by-step XAF integration instructions
 
-## Next Session: Priority Order
-
-### 1. ~~Report Generation Jobs (DevExpress XtraReport)~~ DONE
-- [x] Created `GenerateReportCommand(ReportName, OutputFormat, OutputPath)` in Jobs/Commands
-- [x] Created `GenerateReportHandler` in Blazor.Server/Handlers using IReportExportService
-- [x] Two XtraReport classes: ProjectStatusReport, ContactListByOrgReport in Module/Reports
-- [x] Registered as predefined reports via PredefinedReportsUpdater
-- [x] Registered handler + added to JobDispatchService switch
-- [x] 2 report JobDefinitions seeded (Project Status + Contact List)
-
-### 2. ~~Persistent Hangfire Storage (PostgreSQL via Docker)~~ DONE
-- [x] Reused existing `duetgpt-postgres` container, created `hangfire` database + user
-- [x] Add `Hangfire.PostgreSql` NuGet package to Blazor.Server
-- [x] Add PostgreSQL connection string to appsettings (`HangfireConnection`)
-- [x] Conditional storage: PostgreSQL when connection string present, in-memory when absent
-- [ ] Verify jobs persist across app restarts (manual test)
-- [x] Keep in-memory as fallback for dev (no connection string in Development config)
-
-### 3. ~~Email Jobs (MailKit)~~ DONE
-- [x] SendEmailCommand, SendReportEmailCommand, SendMailMergeCommand
-- [x] IEmailSender with SmtpEmailSender (MailKit) / LogOnlyEmailSender (dev fallback)
-- [x] EmailTemplate entity with admin-editable templates + {Placeholder} syntax
-- [x] Handlers: SendEmailHandler, SendReportEmailHandler, SendMailMergeHandler
-- [x] Config toggle: `Email:Smtp:Host` present → SMTP, absent → log-only
-
-### 4. Future
+## Future
 - [ ] Scheduler calendar view bound to JobDefinition
 - [ ] Cron expression → next-run visualization
 - [ ] Rich parameter UI (dynamic forms from command metadata)
+- [ ] Test project (unit tests for handlers, DateRangeResolver, JobDispatchService)
+- [ ] Job progress/cancellation (CancellationToken + progress reporting for long-running jobs)
+- [ ] Error notifications (alert on repeated job failures via email or XAF notification)
+- [ ] Verify jobs persist across app restarts (manual test)
 
 ## Architecture Decisions
 - Hangfire stays **embedded in Blazor.Server** (no separate service). Split later if needed.
 - Handlers in `xafhangfire.Jobs` are shared — a future standalone worker just references the same project.
 - PostgreSQL 16 for everything — app DB + Hangfire in one Docker container (`xafhangfire-postgres`, port 5433).
+- Report parameters use `Dictionary<string, string>` (not strongly typed) — parameters vary per report and are stored as JSON.
+- Job execution records use `INonSecuredObjectSpaceFactory` — recorder runs in background context, doesn't need secured access.
+- Hangfire dashboard auth uses ASP.NET Core `HttpContext` claims, not XAF security — dashboard is middleware-level.
 
 ## Claude Continuation Instructions
 
@@ -111,6 +104,12 @@ When resuming this project, read these files first:
 18. `xafhangfire/xafhangfire.Jobs/IJobScopeInitializer.cs` — scope initialization interface
 19. `xafhangfire/xafhangfire.Blazor.Server/Services/XafJobScopeInitializer.cs` — XAF auth for background jobs
 20. `docs/plans/2026-02-21-hangfire-auth-fix-design.md` — background auth fix design
+21. `xafhangfire/xafhangfire.Blazor.Server/Handlers/ReportParameterHelper.cs` — report parameter application
+22. `xafhangfire/xafhangfire.Blazor.Server/Services/HangfireDashboardAuthFilter.cs` — dashboard auth
+23. `xafhangfire/xafhangfire.Module/BusinessObjects/JobExecutionRecord.cs` — execution history entity
+24. `xafhangfire/xafhangfire.Jobs/IJobExecutionRecorder.cs` — execution recording interface
+25. `xafhangfire/xafhangfire.Blazor.Server/Services/XafJobExecutionRecorder.cs` — XAF recorder implementation
+26. `docs/integration-guide.md` — integration guide for other XAF solutions
 
 Then check the TODO list above to see what's done and what's next.
 

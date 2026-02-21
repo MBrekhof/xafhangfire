@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using DevExpress.ExpressApp.DC;
@@ -53,5 +54,7 @@ namespace xafhangfire.Module.BusinessObjects
         [FieldSize(FieldSizeAttribute.Unlimited)]
         [VisibleInListView(false)]
         public virtual string LastRunMessage { get; set; }
+
+        public virtual ObservableCollection<JobExecutionRecord> ExecutionHistory { get; set; } = new();
     }
 }

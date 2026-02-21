@@ -26,6 +26,7 @@ public sealed class GenerateReportHandler(
             r => r.DisplayName == command.ReportName);
 
         reportExportService.SetupReport(report);
+        ReportParameterHelper.ApplyParameters(report, command.ReportParameters, logger);
 
         var outputPath = command.OutputPath
             ?? Path.Combine(

@@ -26,6 +26,7 @@ public sealed class SendReportEmailHandler(
         using var report = reportExportService.LoadReport<ReportDataV2>(
             r => r.DisplayName == command.ReportName);
         reportExportService.SetupReport(report);
+        ReportParameterHelper.ApplyParameters(report, command.ReportParameters, logger);
 
         var extension = command.OutputFormat.ToLowerInvariant();
         var outputDir = ResolveOutputDirectory();
