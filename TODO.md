@@ -165,3 +165,18 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 - Connection strings use `EFCoreProvider=PostgreSql;` prefix for XAF auto-detection. Hangfire needs this prefix stripped (see `StripEFCoreProvider` in Startup.cs).
 - Background Hangfire jobs need `IJobScopeInitializer` to authenticate as "HangfireJob" user — without it, handlers using `IReportExportService` or `IObjectSpaceFactory` fail with "The user name must not be empty".
 - Don't name a class `ReportOptions` — clashes with `DevExpress.ExpressApp.ReportsV2.ReportOptions`. Use `ReportOutputOptions` instead.
+- Blazor.Server project does NOT have `<Nullable>enable</Nullable>` — don't use `string?` there either.
+- Custom property editors use the `BlazorPropertyEditorBase` + `ComponentModelBase` + Razor component pattern. The `ComponentModel` properties must match the Razor component's `[Parameter]` properties by name and type.
+- When adding a new command type, register it in `CommandMetadataProvider.CommandTypes` dictionary — otherwise the parameter editor falls back to raw JSON.
+- The `JobParametersPropertyEditor` subscribes to `INotifyPropertyChanged` on the current object — this works because XAF EF Core entities use `ChangingAndChangedNotificationsWithOriginalValues` change tracking.
+
+## Handoff Notes (Session 8 → Next Session)
+
+**Status:** All code committed and pushed to `origin/master` (`f0e1fd0`). User is testing the cron visualization and rich parameter UI features.
+
+**What to expect:** User may report bugs from manual testing. If so, use the systematic-debugging skill. Common things to check:
+- CronDescription/NextScheduledRuns display correctly in JobDefinition detail view
+- Parameter editor shows typed fields for known command types (DemoLogCommand, etc.)
+- Parameter editor falls back to raw JSON for unknown types
+- Changing JobTypeName refreshes the parameter form
+- Saving a JobDefinition correctly serializes field values back to ParametersJson
