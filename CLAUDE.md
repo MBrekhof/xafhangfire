@@ -5,6 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run Commands
 
 ```bash
+# Start PostgreSQL (required before running the app)
+docker compose up -d
+
 # Build entire solution
 dotnet build xafhangfire/xafhangfire.slnx
 
@@ -25,7 +28,7 @@ There are no test projects yet. Build configurations: Debug, Release, EasyTest.
 
 ## Architecture
 
-This is a **DevExpress XAF (eXpressApp Framework)** application using **EF Core** with SQL Server (LocalDB). XAF provides automatic CRUD UI generation, security, reporting, and more from business object definitions.
+This is a **DevExpress XAF (eXpressApp Framework)** application using **EF Core** with **PostgreSQL 16** (Docker). XAF provides automatic CRUD UI generation, security, reporting, and more from business object definitions.
 
 ### Project Structure
 
@@ -85,18 +88,26 @@ Command/Handler + pluggable dispatcher. See `job-dispatcher-architecture.md` for
 - JWT auth for Web API, Cookie auth for Blazor UI
 - Default dev users: "User" (Default role), "Admin" (Administrators role) — empty passwords, non-Release only
 
+### Database
+
+- **PostgreSQL 16** in Docker (`xafhangfire-postgres` container, port 5433)
+- `docker-compose.yml` at repo root — `docker compose up -d` to start
+- Single database `xafhangfire` holds both app tables and Hangfire tables
+- Connection strings use `EFCoreProvider=PostgreSql;` prefix for XAF auto-detection
+- `Npgsql.EnableLegacyTimestampBehavior = true` for XAF DateTime compatibility
+
 ### EF Core Configuration
 
 The DbContext uses several XAF-specific EF Core conventions:
 - `UseDeferredDeletion` — soft delete support
 - `UseOptimisticLock` — concurrency control
-- `ChangingAndChangedNotificationsWithOriginalValues` — change tracking strategy for XAF proxies
+- `ChangingAndChangedNotificationsWithOriginalValues` — change tracking strategy for XAF proxies (navigation collections MUST use `ObservableCollection<T>`)
 - `PreferFieldDuringConstruction` — property access mode for proxy compatibility
 
 ## Tech Stack
 
 - **.NET 8.0**, **DevExpress XAF 25.2.x**, **EF Core 8.0.18**
-- **SQL Server LocalDB** (`(localdb)\mssqllocaldb`)
+- **PostgreSQL 16** via Docker (`localhost:5433`)
 - **Blazor Server** + **SignalR** for web UI
 - **Swagger/OpenAPI** at `/swagger` (dev only)
 - **OData v4.01** at `/api/odata`

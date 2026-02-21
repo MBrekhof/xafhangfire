@@ -10,6 +10,8 @@
 
 **Session 4 (2026-02-19):** Email Jobs implemented with MailKit. Three commands: SendEmail, SendReportEmail (report as attachment), SendMailMerge (template + CRM contacts). IEmailSender with SmtpEmailSender/LogOnlyEmailSender toggle. EmailTemplate XAF entity with placeholder syntax.
 
+**Session 5 (2026-02-21):** Migrated application database from SQL Server LocalDB to PostgreSQL 16 in Docker. Consolidated app DB and Hangfire storage into single PostgreSQL instance (`xafhangfire-postgres` container, port 5433). Added docker-compose.yml. Fixed pre-existing ObservableCollection bug in CRM entities.
+
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
 - [x] DemoLogCommand/Handler + ListUsersCommand/Handler
@@ -38,6 +40,12 @@
 - [x] 2 seed EmailTemplates (Welcome Contact, Project Status Update)
 - [x] 2 email JobDefinitions seeded (Welcome Mail Merge, Email Project Status Report)
 - [x] Email config section in appsettings.json (empty Host = log-only mode)
+- [x] PostgreSQL 16 Docker container via docker-compose.yml (port 5433)
+- [x] EF Core provider swapped from SqlServer to Npgsql
+- [x] Connection strings updated for both Blazor.Server and Win projects
+- [x] Hangfire consolidated into same PostgreSQL database (shared ConnectionString)
+- [x] Npgsql legacy timestamp behavior enabled for XAF DateTime compatibility
+- [x] Fixed ObservableCollection bug in Organization/Project navigation properties
 
 ## Next Session: Priority Order
 
@@ -72,7 +80,7 @@
 ## Architecture Decisions
 - Hangfire stays **embedded in Blazor.Server** (no separate service). Split later if needed.
 - Handlers in `xafhangfire.Jobs` are shared — a future standalone worker just references the same project.
-- PostgreSQL for Hangfire storage (Docker Desktop). Application data stays on SQL Server LocalDB.
+- PostgreSQL 16 for everything — app DB + Hangfire in one Docker container (`xafhangfire-postgres`, port 5433).
 
 ## Claude Continuation Instructions
 
@@ -93,12 +101,19 @@ When resuming this project, read these files first:
 13. `xafhangfire/xafhangfire.Blazor.Server/Services/SmtpEmailSender.cs` — MailKit SMTP sender
 14. `xafhangfire/xafhangfire.Module/BusinessObjects/EmailTemplate.cs` — email template entity
 15. `docs/plans/2026-02-19-email-jobs-design.md` — email jobs design doc
+16. `docker-compose.yml` — PostgreSQL 16 container definition
+17. `docs/plans/2026-02-21-postgresql-migration-design.md` — PostgreSQL migration design
 
 Then check the TODO list above to see what's done and what's next.
 
+Start PostgreSQL: `docker compose up -d` from repo root.
 Build: `dotnet build xafhangfire.slnx` from repo root.
+DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfire.Blazor.Server.csproj -- --updateDatabase --forceUpdate --silent`
 
 ## Known Gotchas
 - DevExpress 25.2 removed `SizeAttribute`. Use `FieldSizeAttribute` from `DevExpress.ExpressApp.DC` instead.
 - Module project has no `<Nullable>enable</Nullable>` — don't use `string?` there.
 - If IIS Express is running, it may lock DLLs. Kill it before rebuilding.
+- Navigation collections MUST use `ObservableCollection<T>` (not `List<T>`) due to `ChangingAndChangedNotificationsWithOriginalValues` change tracking strategy.
+- PostgreSQL requires `Npgsql.EnableLegacyTimestampBehavior = true` for XAF's `DateTime` properties (set in Startup.cs).
+- Connection strings use `EFCoreProvider=PostgreSql;` prefix for XAF auto-detection. Hangfire needs this prefix stripped (see `StripEFCoreProvider` in Startup.cs).
