@@ -34,7 +34,7 @@ namespace xafhangfire.Module.BusinessObjects
         public virtual string JobTypeName { get; set; } = string.Empty;
 
         [FieldSize(FieldSizeAttribute.Unlimited)]
-        [EditorAlias("StringPropertyEditor")]
+        [EditorAlias("JobParametersEditor")]
         public virtual string ParametersJson { get; set; }
 
         public virtual string CronExpression { get; set; }

@@ -1,0 +1,115 @@
+@using DevExpress.Blazor
+
+@if (ShowRawEditor)
+{
+    <DxMemo Value="@RawJson"
+            ValueChanged="@((string v) => OnRawJsonChanged(v))"
+            Rows="6" />
+}
+else
+{
+    @foreach (var field in Fields)
+    {
+        <div class="mb-2">
+            <label class="xaf-field-caption">@field.DisplayName@(field.IsRequired ? " *" : "")</label>
+            @switch (field.FieldType)
+            {
+                case "int":
+                    <DxSpinEdit Value="@field.IntValue"
+                                ValueChanged="@((int v) => OnIntChanged(field, v))"
+                                CssClass="w-100" />
+                    break;
+                case "bool":
+                    <DxCheckBox Checked="@field.BoolValue"
+                                CheckedChanged="@((bool v) => OnBoolChanged(field, v))" />
+                    break;
+                case "json":
+                    <DxMemo Value="@field.StringValue"
+                            ValueChanged="@((string v) => OnStringChanged(field, v))"
+                            Rows="3" CssClass="w-100" />
+                    break;
+                default:
+                    <DxTextBox Value="@field.StringValue"
+                               ValueChanged="@((string v) => OnStringChanged(field, v))"
+                               CssClass="w-100" />
+                    break;
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter]
+    public List<ParameterFieldModel> Fields { get; set; } = new();
+
+    [Parameter]
+    public bool ShowRawEditor { get; set; }
+
+    [Parameter]
+    public string RawJson { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> RawJsonChanged { get; set; }
+
+    private async Task OnRawJsonChanged(string value)
+    {
+        await RawJsonChanged.InvokeAsync(value);
+    }
+
+    private async Task OnStringChanged(ParameterFieldModel field, string value)
+    {
+        field.StringValue = value;
+        await NotifyJsonChanged();
+    }
+
+    private async Task OnIntChanged(ParameterFieldModel field, int value)
+    {
+        field.IntValue = value;
+        await NotifyJsonChanged();
+    }
+
+    private async Task OnBoolChanged(ParameterFieldModel field, bool value)
+    {
+        field.BoolValue = value;
+        await NotifyJsonChanged();
+    }
+
+    private async Task NotifyJsonChanged()
+    {
+        var json = SerializeFields();
+        await RawJsonChanged.InvokeAsync(json);
+    }
+
+    private string SerializeFields()
+    {
+        var dict = new Dictionary<string, object>();
+        foreach (var field in Fields)
+        {
+            switch (field.FieldType)
+            {
+                case "int":
+                    dict[field.Name] = field.IntValue;
+                    break;
+                case "bool":
+                    dict[field.Name] = field.BoolValue;
+                    break;
+                case "json":
+                    try
+                    {
+                        dict[field.Name] = System.Text.Json.JsonSerializer.Deserialize<object>(field.StringValue);
+                    }
+                    catch
+                    {
+                        dict[field.Name] = field.StringValue;
+                    }
+                    break;
+                default:
+                    if (!string.IsNullOrEmpty(field.StringValue))
+                        dict[field.Name] = field.StringValue;
+                    break;
+            }
+        }
+        return System.Text.Json.JsonSerializer.Serialize(dict,
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = false });
+    }
+}
