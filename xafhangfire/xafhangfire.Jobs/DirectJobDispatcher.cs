@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 namespace xafhangfire.Jobs;
 
 public sealed class DirectJobDispatcher(
-    IServiceProvider services,
+    IServiceScopeFactory scopeFactory,
     ILogger<DirectJobDispatcher> logger) : IJobDispatcher
 {
     public async Task DispatchAsync<TCommand>(
@@ -16,7 +16,8 @@ public sealed class DirectJobDispatcher(
             "DirectDispatcher: executing {CommandType} inline",
             typeof(TCommand).Name);
 
-        var handler = services.GetRequiredService<IJobHandler<TCommand>>();
+        using var scope = scopeFactory.CreateScope();
+        var handler = scope.ServiceProvider.GetRequiredService<IJobHandler<TCommand>>();
         await handler.ExecuteAsync(command, cancellationToken);
     }
 
