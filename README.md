@@ -70,7 +70,10 @@ dotnet build xafhangfire.slnx
 # 3. Update database schema
 dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfire.Blazor.Server.csproj -- --updateDatabase --forceUpdate --silent
 
-# 4. Run Blazor Server (https://localhost:5001)
+# 4. Run tests
+dotnet test xafhangfire/xafhangfire.Jobs.Tests/xafhangfire.Jobs.Tests.csproj
+
+# 5. Run Blazor Server (https://localhost:5001)
 dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfire.Blazor.Server.csproj
 ```
 

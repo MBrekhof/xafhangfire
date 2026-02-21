@@ -12,7 +12,7 @@
 
 **Session 5 (2026-02-21):** Migrated application database from SQL Server LocalDB to PostgreSQL 16 in Docker. Consolidated app DB and Hangfire storage into single PostgreSQL instance (`xafhangfire-postgres` container, port 5433). Added docker-compose.yml. Fixed pre-existing ObservableCollection bug in CRM entities. Fixed DI scoping bug (DirectJobDispatcher uses IServiceScopeFactory). Added Serilog structured logging. Fixed XAF security context for background Hangfire jobs (IJobScopeInitializer + HangfireJob service user). Configurable report output directory via `Reports:OutputDirectory` in appsettings.json.
 
-**Session 6 (2026-02-21):** Report parameters support (Dictionary<string, string> with DateRangeResolver integration). Hangfire dashboard authorization (IDashboardAuthorizationFilter, Administrators-only in production). Job execution history tracking (JobExecutionRecord entity + IJobExecutionRecorder). Updated README with full project documentation. Created integration guide (docs/integration-guide.md).
+**Session 6 (2026-02-21):** Report parameters support (Dictionary<string, string> with DateRangeResolver integration). Hangfire dashboard authorization (IDashboardAuthorizationFilter, Administrators-only in production). Job execution history tracking (JobExecutionRecord entity + IJobExecutionRecorder). Updated README with full project documentation. Created integration guide (docs/integration-guide.md). xUnit test project with 44 tests covering DateRangeResolver, JobDispatchService, DirectJobDispatcher, handlers, and LogOnlyEmailSender.
 
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
@@ -62,12 +62,14 @@
 - [x] JobDefinition → JobExecutionRecord navigation (ObservableCollection)
 - [x] README.md — full project documentation with architecture, setup, configuration, job types
 - [x] Integration guide — `docs/integration-guide.md` with step-by-step XAF integration instructions
+- [x] xUnit test project (`xafhangfire.Jobs.Tests`) — 44 tests covering DateRangeResolver, JobDispatchService, DirectJobDispatcher, SendEmailHandler, DemoLogHandler, LogOnlyEmailSender
+- [x] FluentAssertions + NSubstitute for assertions and mocking
 
 ## Future
 - [ ] Scheduler calendar view bound to JobDefinition
 - [ ] Cron expression → next-run visualization
 - [ ] Rich parameter UI (dynamic forms from command metadata)
-- [ ] Test project (unit tests for handlers, DateRangeResolver, JobDispatchService)
+- [ ] Expand test coverage (Blazor.Server handlers with mocked IReportExportService, integration tests)
 - [ ] Job progress/cancellation (CancellationToken + progress reporting for long-running jobs)
 - [ ] Error notifications (alert on repeated job failures via email or XAF notification)
 - [ ] Verify jobs persist across app restarts (manual test)

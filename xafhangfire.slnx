@@ -4,6 +4,11 @@
     <BuildType Name="EasyTest" />
     <BuildType Name="Release" />
   </Configurations>
+  <Folder Name="/xafhangfire/">
+    <Project Path="xafhangfire/xafhangfire.Jobs.Tests/xafhangfire.Jobs.Tests.csproj">
+      <BuildType Solution="EasyTest|*" Project="Debug" />
+    </Project>
+  </Folder>
   <Project Path="xafhangfire/xafhangfire.Blazor.Server/xafhangfire.Blazor.Server.csproj" />
   <Project Path="xafhangfire/xafhangfire.Module/xafhangfire.Module.csproj" />
   <Project Path="xafhangfire/xafhangfire.Win/xafhangfire.Win.csproj" />

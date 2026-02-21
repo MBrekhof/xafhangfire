@@ -24,7 +24,12 @@ dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfire.Blazor.Se
 dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfire.Blazor.Server.csproj -- --updateDatabase --forceUpdate --silent
 ```
 
-There are no test projects yet. Build configurations: Debug, Release, EasyTest.
+```bash
+# Run tests
+dotnet test xafhangfire/xafhangfire.Jobs.Tests/xafhangfire.Jobs.Tests.csproj
+```
+
+Build configurations: Debug, Release, EasyTest.
 
 ## Architecture
 
