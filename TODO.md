@@ -22,6 +22,12 @@
 
 **Session 10 (2026-02-21):** Execution record UI cleanup + report parameter auto-discovery + version pinning. ProgressPercent/ProgressMessage hidden from execution record views. All execution record fields made read-only (including JobDefinition nav property). Null values excluded from execution record JSON serialization. Report parameter auto-discovery implemented: when user selects a ReportName, the editor loads the XtraReport and inspects its Parameters collection to pre-populate key-value pairs. DataSourceHint changed from "KeyValue" to "ReportParameters" for report parameter fields. ReportParameterHelper updated with Description-based fallback lookup. DevExpress packages pinned from 25.2.* to 25.2.3. Added explicit PostgreSQL provider references to Win and Blazor.Server projects. Added IDesignTimeDbContextFactory for PostgreSQL Model Editor support. 1 new test (70 total).
 
+**Session 11 (2026-02-22):** Fixed Model Editor crash with PostgreSQL (SqlServer package workaround + DesignTimeDbContextFactory base class). Updated CLAUDE.md, MEMORY.md.
+
+**Session 12 (2026-02-22):** Debugged report parameter auto-discovery. Root cause chain: (1) Reports had no user-defined parameters → added StartDate/EndDate to ProjectStatusReport. (2) PredefinedReportsUpdater stores NULL Content for predefined reports — metadata only. (3) IReportExportService.LoadReport returns auto-created parameters from FilterString with empty names. (4) Fallback condition checked count not names. Added RefreshPredefinedReports to Updater.cs. **Decision: implement proper XAF approach using ReportParametersObjectBase** (approach B) in next session.
+
+**Session 13 (2026-02-22):** Implemented ReportParametersObjectBase approach (Approach B) for report parameter auto-discovery. Created `ProjectStatusReportParameters` class with StartDate/EndDate properties and `GetCriteria()`. Registered with 3-arg `AddPredefinedReport` in Module.cs. Rewrote `DiscoverReportParameters` to use `ParametersObjectTypeName` from `ReportDataV2` and reflect on the parameters object's public properties — no more XtraReport instantiation or IReportExportService.LoadReport for discovery. Kept XtraReport.Parameters fallback for reports without a parameters object. Database verified: `ParametersObjectTypeName` correctly populated. Build clean, all 70 tests pass.
+
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
 - [x] DemoLogCommand/Handler + ListUsersCommand/Handler
@@ -108,8 +114,14 @@
 - [x] Explicit Npgsql.EntityFrameworkCore.PostgreSQL + Microsoft.EntityFrameworkCore.Design in Win and Blazor.Server projects
 - [x] DesignTimeDbContextFactory (xafhangfireDesignTimeDbContextFactory) for Model Editor support — uses XAF's base class + SqlServer package workaround
 - [x] 70 tests total (69 previous + 1 SendReportEmailCommand hint test)
+- [x] ProjectStatusReportParameters : ReportParametersObjectBase (StartDate/EndDate + GetCriteria)
+- [x] 3-arg AddPredefinedReport with typeof(ProjectStatusReportParameters) in Module.cs
+- [x] DiscoverReportParameters rewritten — primary path uses ParametersObjectTypeName + reflection, fallback uses XtraReport.Parameters
+- [x] RefreshPredefinedReports in Updater.cs ensures DB stays in sync with code
 
 ## Future
+- [ ] Add parameters to `ContactListByOrgReport` (e.g., Organization filter with ReportParametersObjectBase)
+- [ ] Update `GenerateReportHandler` to use `ReportDataSourceHelperBase.SetupReport` with parameters object (currently uses XtraReport.Parameters directly which works fine)
 - [ ] Scheduler calendar view bound to JobDefinition
 - [ ] Expand test coverage (Blazor.Server handlers with mocked IReportExportService, integration tests)
 - [ ] Real-time progress UI (SignalR push of progress updates to XAF detail view)
@@ -180,6 +192,8 @@ When resuming this project, read these files first:
 40. `xafhangfire/xafhangfire.Blazor.Server/Editors/JobTypeNameComboBox.razor` — Razor component for JobTypeName dropdown
 41. `xafhangfire/xafhangfire.Blazor.Server/Controllers/JobDefinitionRefreshController.cs` — live refresh of computed properties
 42. `docs/plans/2026-02-21-job-ui-improvements-plan.md` — job UI improvements plan
+
+43. `xafhangfire/xafhangfire.Module/Reports/ProjectStatusReportParameters.cs` — ReportParametersObjectBase descendant for Project Status Report
 
 Then check the TODO list above to see what's done and what's next.
 

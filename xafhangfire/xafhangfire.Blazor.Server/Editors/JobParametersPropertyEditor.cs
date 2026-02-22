@@ -9,6 +9,7 @@ using DevExpress.ExpressApp.ReportsV2;
 using DevExpress.Persistent.BaseImpl.EF;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using xafhangfire.Jobs;
 using xafhangfire.Module.BusinessObjects;
 
@@ -19,6 +20,7 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
 {
     private XafApplication application;
     private IObjectSpace objectSpace;
+    private ILogger logger;
 
     public JobParametersPropertyEditor(Type objectType, IModelMemberViewItem model)
         : base(objectType, model) { }
@@ -27,6 +29,8 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
     {
         this.objectSpace = objectSpace;
         this.application = application;
+        this.logger = application.ServiceProvider.GetService<ILoggerFactory>()
+            ?.CreateLogger<JobParametersPropertyEditor>();
     }
 
     public override JobParametersFormModel ComponentModel =>
@@ -99,12 +103,16 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
     private void RefreshFields(string json)
     {
         var jobTypeName = GetJobTypeName();
+        logger?.LogInformation("[ParamEditor] RefreshFields called. JobTypeName='{JobType}', json='{Json}'",
+            jobTypeName ?? "(null)", json?.Length > 200 ? json[..200] + "..." : json);
+
         var metadata = jobTypeName != null
             ? CommandMetadataProvider.GetMetadata(jobTypeName)
             : null;
 
         if (metadata == null)
         {
+            logger?.LogInformation("[ParamEditor] No metadata for '{JobType}', showing raw editor", jobTypeName);
             ComponentModel.ShowRawEditor = true;
             ComponentModel.Fields = new();
             return;
@@ -192,9 +200,16 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
             if (param.DataSourceHint == "ReportParameters" && field.FieldType == "keyvalue")
             {
                 var reportName = ExtractReportNameFromValues(values);
+                logger?.LogInformation("[ParamEditor] ReportParameters hint for field '{Field}', reportName='{ReportName}', existing KV count={Count}",
+                    param.Name, reportName ?? "(null)", field.KeyValuePairs?.Count ?? 0);
+
                 if (!string.IsNullOrEmpty(reportName))
                 {
                     var discovered = DiscoverReportParameters(reportName);
+                    logger?.LogInformation("[ParamEditor] Discovered {Count} params for '{ReportName}': [{Params}]",
+                        discovered.Count, reportName,
+                        string.Join(", ", discovered.Select(d => $"{d.Key}={d.Value}")));
+
                     if (discovered.Count > 0)
                     {
                         // Merge: discovered parameters as base, overlay with existing user values
@@ -207,6 +222,9 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
                             Key = d.Key,
                             Value = existingDict.TryGetValue(d.Key, out var v) ? v : d.Value
                         }).ToList();
+
+                        logger?.LogInformation("[ParamEditor] After merge: [{Merged}]",
+                            string.Join(", ", field.KeyValuePairs.Select(p => $"{p.Key}={p.Value}")));
                     }
                 }
             }
@@ -215,41 +233,133 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
         }
 
         ComponentModel.Fields = fields;
+
+        // Re-serialize fields to JSON so discovered params are persisted
+        var updatedJson = SerializeFieldsToJson(fields);
+        if (updatedJson != ComponentModel.RawJson)
+        {
+            logger?.LogInformation("[ParamEditor] Updating JSON after discovery. Old length={OldLen}, New length={NewLen}",
+                ComponentModel.RawJson?.Length ?? 0, updatedJson.Length);
+            ComponentModel.RawJson = updatedJson;
+            OnControlValueChanged();
+            WriteValue();
+        }
+
+        logger?.LogInformation("[ParamEditor] RefreshFields complete. {Count} fields assigned. KV fields: [{KvSummary}]",
+            fields.Count,
+            string.Join("; ", fields.Where(f => f.FieldType == "keyvalue")
+                .Select(f => $"{f.Name}=[{string.Join(",", f.KeyValuePairs?.Select(p => $"{p.Key}:{p.Value}") ?? Array.Empty<string>())}]")));
     }
 
     private List<KeyValuePairModel> DiscoverReportParameters(string reportName)
     {
         try
         {
-            var reportService = application.ServiceProvider.GetService<IReportExportService>();
-            if (reportService == null) return new();
+            using var os = application.CreateObjectSpace(typeof(ReportDataV2));
+            var reportData = os.GetObjectsQuery<ReportDataV2>()
+                .Where(r => r.DisplayName == reportName)
+                .FirstOrDefault();
 
-            using var report = reportService.LoadReport<ReportDataV2>(
-                r => r.DisplayName == reportName);
-
-            var pairs = new List<KeyValuePairModel>();
-            foreach (DevExpress.XtraReports.Parameters.Parameter p in report.Parameters)
+            if (reportData == null)
             {
-                if (!p.Visible) continue;
-                // Name is the code identifier; Description is the display label.
-                // Prefer Name (used by ReportParameterHelper for lookup), fall back to Description.
-                var key = !string.IsNullOrEmpty(p.Name) ? p.Name
-                        : !string.IsNullOrEmpty(p.Description) ? p.Description
-                        : null;
-                if (key == null) continue;
-
-                pairs.Add(new KeyValuePairModel
-                {
-                    Key = key,
-                    Value = p.Value?.ToString() ?? string.Empty
-                });
+                logger?.LogWarning("[ParamEditor.Discover] No ReportDataV2 found for '{ReportName}'", reportName);
+                return new();
             }
-            return pairs;
-        }
-        catch
-        {
+
+            logger?.LogInformation("[ParamEditor.Discover] Found report '{ReportName}': ParametersObjectTypeName='{ParamsType}', PredefinedReportTypeName='{ReportType}'",
+                reportName, reportData.ParametersObjectTypeName ?? "(null)", reportData.PredefinedReportTypeName ?? "(null)");
+
+            // Primary: use ReportParametersObjectBase if registered
+            if (!string.IsNullOrEmpty(reportData.ParametersObjectTypeName))
+            {
+                var paramsType = ResolveType(reportData.ParametersObjectTypeName);
+                logger?.LogInformation("[ParamEditor.Discover] Resolved ParametersObjectType: {Resolved}",
+                    paramsType?.FullName ?? "FAILED TO RESOLVE");
+
+                if (paramsType != null)
+                {
+                    var baseProps = typeof(DevExpress.ExpressApp.ReportsV2.ReportParametersObjectBase)
+                        .GetProperties()
+                        .Select(p => p.Name)
+                        .ToHashSet();
+
+                    var allProps = paramsType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    logger?.LogInformation("[ParamEditor.Discover] All public props on {Type}: [{Props}]",
+                        paramsType.Name,
+                        string.Join(", ", allProps.Select(p => $"{p.Name}({p.PropertyType.Name})")));
+                    logger?.LogInformation("[ParamEditor.Discover] Base class props to exclude: [{BaseProps}]",
+                        string.Join(", ", baseProps));
+
+                    var result = allProps
+                        .Where(p => !baseProps.Contains(p.Name) && p.CanRead && p.CanWrite)
+                        .Select(p => new KeyValuePairModel
+                        {
+                            Key = p.Name,
+                            Value = GetDefaultValueString(p.PropertyType)
+                        })
+                        .ToList();
+
+                    logger?.LogInformation("[ParamEditor.Discover] Returning {Count} params via ParametersObject: [{Params}]",
+                        result.Count, string.Join(", ", result.Select(r => $"{r.Key}={r.Value}")));
+                    return result;
+                }
+            }
+
+            // Fallback: instantiate the report class and inspect XtraReport.Parameters
+            if (!string.IsNullOrEmpty(reportData.PredefinedReportTypeName))
+            {
+                var reportType = ResolveType(reportData.PredefinedReportTypeName);
+                logger?.LogInformation("[ParamEditor.Discover] Fallback — resolved report type: {Resolved}",
+                    reportType?.FullName ?? "FAILED TO RESOLVE");
+
+                if (reportType != null)
+                {
+                    using var report = (DevExpress.XtraReports.UI.XtraReport)Activator.CreateInstance(reportType);
+                    var pairs = new List<KeyValuePairModel>();
+                    foreach (DevExpress.XtraReports.Parameters.Parameter p in report.Parameters)
+                    {
+                        logger?.LogInformation("[ParamEditor.Discover] Fallback param: Name='{Name}', Visible={Visible}, Type={Type}, Value='{Value}'",
+                            p.Name ?? "(null)", p.Visible, p.Type?.Name ?? "(null)", p.Value);
+                        if (!p.Visible || string.IsNullOrEmpty(p.Name)) continue;
+                        pairs.Add(new KeyValuePairModel
+                        {
+                            Key = p.Name,
+                            Value = p.Value?.ToString() ?? string.Empty
+                        });
+                    }
+                    if (pairs.Count > 0) return pairs;
+                }
+            }
+
+            logger?.LogWarning("[ParamEditor.Discover] No parameters found for '{ReportName}'", reportName);
             return new();
         }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "[ParamEditor.Discover] Exception discovering params for '{ReportName}'", reportName);
+            return new();
+        }
+    }
+
+    private static Type ResolveType(string typeName)
+    {
+        return Type.GetType(typeName)
+            ?? AppDomain.CurrentDomain.GetAssemblies()
+                .Select(a => a.GetType(typeName))
+                .FirstOrDefault(t => t != null);
+    }
+
+    private static string GetDefaultValueString(Type type)
+    {
+        if (type == typeof(DateTime))
+            return DateTime.Now.ToString("yyyy-MM-dd");
+        if (type == typeof(DateOnly))
+            return DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd");
+        if (type == typeof(int) || type == typeof(decimal) || type == typeof(double))
+            return "0";
+        if (type == typeof(bool))
+            return "false";
+        return string.Empty;
     }
 
     private List<string> ResolveDropdownItems(string dataSourceHint)
@@ -347,6 +457,41 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
         {
             return new();
         }
+    }
+
+    private static string SerializeFieldsToJson(List<ParameterFieldModel> fields)
+    {
+        var dict = new Dictionary<string, object>();
+        foreach (var field in fields)
+        {
+            switch (field.FieldType)
+            {
+                case "int":
+                    dict[field.Name] = field.IntValue;
+                    break;
+                case "bool":
+                    dict[field.Name] = field.BoolValue;
+                    break;
+                case "keyvalue":
+                    var kvDict = new Dictionary<string, string>();
+                    if (field.KeyValuePairs != null)
+                    {
+                        foreach (var kvp in field.KeyValuePairs)
+                        {
+                            if (!string.IsNullOrWhiteSpace(kvp.Key))
+                                kvDict[kvp.Key] = kvp.Value;
+                        }
+                    }
+                    if (kvDict.Count > 0)
+                        dict[field.Name] = kvDict;
+                    break;
+                default: // string, dropdown, json
+                    if (!string.IsNullOrEmpty(field.StringValue))
+                        dict[field.Name] = field.StringValue;
+                    break;
+            }
+        }
+        return JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = false });
     }
 
     private static string FormatDisplayName(string paramName)

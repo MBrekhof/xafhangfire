@@ -87,6 +87,10 @@ namespace xafhangfire.Module.DatabaseUpdate
             SeedEmailTemplates();
             ObjectSpace.CommitChanges();
 #endif
+            // Always refresh predefined reports so DB stays in sync with code changes.
+            // This Updater runs before PredefinedReportsUpdater, which recreates any missing reports.
+            RefreshPredefinedReports();
+            ObjectSpace.CommitChanges();
         }
         public override void UpdateDatabaseBeforeUpdateSchema()
         {
@@ -392,6 +396,20 @@ namespace xafhangfire.Module.DatabaseUpdate
 <p>Please review the latest project activities and reach out if you have any questions.</p>
 <p>Best regards,<br/>The XAF Hangfire Team</p>";
             statusUpdate.Description = "Periodic status update sent to contacts about their organization's projects.";
+        }
+
+        void RefreshPredefinedReports()
+        {
+            // Delete known predefined reports so PredefinedReportsUpdater recreates them from current code.
+            // This ensures report parameters, layout changes, etc. are always in sync with code.
+            var predefinedNames = new[] { "Project Status Report", "Contact List by Organization" };
+            var stale = ObjectSpace.GetObjectsQuery<ReportDataV2>()
+                .Where(r => predefinedNames.Contains(r.DisplayName))
+                .ToList();
+            foreach (var report in stale)
+            {
+                ObjectSpace.Delete(report);
+            }
         }
 
         PermissionPolicyRole CreateBackgroundJobsRole()

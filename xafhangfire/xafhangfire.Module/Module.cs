@@ -56,7 +56,7 @@ namespace xafhangfire.Module
             PredefinedReportsUpdater predefinedReportsUpdater =
                 new PredefinedReportsUpdater(Application, objectSpace, versionFromDB);
             predefinedReportsUpdater.AddPredefinedReport<Reports.ProjectStatusReport>(
-                "Project Status Report", typeof(BusinessObjects.Project));
+                "Project Status Report", typeof(BusinessObjects.Project), typeof(Reports.ProjectStatusReportParameters));
             predefinedReportsUpdater.AddPredefinedReport<Reports.ContactListByOrgReport>(
                 "Contact List by Organization", typeof(BusinessObjects.Contact));
             return new ModuleUpdater[] { updater, predefinedReportsUpdater };
