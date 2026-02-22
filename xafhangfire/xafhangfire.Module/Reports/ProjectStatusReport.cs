@@ -2,7 +2,6 @@ using System.Drawing;
 using DevExpress.Drawing;
 using DevExpress.Persistent.Base.ReportsV2;
 using DevExpress.XtraPrinting;
-using DevExpress.XtraReports.Parameters;
 using DevExpress.XtraReports.UI;
 
 namespace xafhangfire.Module.Reports
@@ -22,28 +21,10 @@ namespace xafhangfire.Module.Reports
 
             Landscape = true;
 
-            // Report parameters for date range filtering
-            var startDateParam = new Parameter
-            {
-                Name = "StartDate",
-                Description = "Start Date",
-                Type = typeof(DateTime),
-                Value = new DateTime(2000, 1, 1),
-                Visible = true
-            };
-            Parameters.Add(startDateParam);
-
-            var endDateParam = new Parameter
-            {
-                Name = "EndDate",
-                Description = "End Date",
-                Type = typeof(DateTime),
-                Value = DateTime.Now.AddYears(1),
-                Visible = true
-            };
-            Parameters.Add(endDateParam);
-
-            // Filter projects by StartDate within the parameter range
+            // Parameters are provided exclusively by ProjectStatusReportParameters
+            // (ReportParametersObjectBase) — no Parameter objects needed on the report.
+            // The FilterString references ?-prefixed names that ReportParameterHelper
+            // auto-creates at runtime when executing via the job dispatcher.
             FilterString = "[StartDate] >= ?StartDate And [StartDate] <= ?EndDate";
             RequestParameters = false;
 

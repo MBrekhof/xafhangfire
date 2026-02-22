@@ -30,6 +30,14 @@
 
 **Session 14 (2026-02-22):** Fixed two bugs in report parameter auto-discovery UI. (1) **JSON persistence** — discovered parameters were set on the model fields but never serialized back to JSON, so they were lost on save/reload. Fixed by adding `SerializeFieldsToJson()` in the property editor that re-serializes fields after discovery and calls `WriteValue()`. (2) **DxTextBox rendering** — DevExpress `DxTextBox` components don't display their `Value` parameter when created dynamically during XAF Blazor adapter render cycles (shows NullText placeholders instead of actual values). Replaced with plain HTML `<input>` elements styled with a custom `kv-input` CSS class to match DevExpress Fluent theme. Cleaned up diagnostic logging. Build clean, all 70 tests pass.
 
+## FINDINGS
+- [ ] Authentication API likely blocked by default JWT policy (AuthenticationController lacks `[AllowAnonymous]` while default policy requires JWT). See `xafhangfire.Blazor.Server/API/Security/AuthenticationController.cs` and `xafhangfire.Blazor.Server/Startup.cs`.
+- [ ] Hangfire recurring job IDs collide per command type (Schedule uses `typeof(TCommand).Name`), so multiple JobDefinitions of same type overwrite each other. See `xafhangfire.Jobs/HangfireJobDispatcher.cs` and `xafhangfire.Blazor.Server/Services/JobSyncService.cs`.
+- [ ] Execution records probably don't link to JobDefinition because recorder matches `JobDefinition.Name` but executor passes `commandType` as job name. See `xafhangfire.Jobs/JobExecutor.cs` and `xafhangfire.Blazor.Server/Services/XafJobExecutionRecorder.cs`.
+- [ ] Disabled/deleted JobDefinitions do not remove existing Hangfire recurring jobs (sync only adds on startup). See `xafhangfire.Blazor.Server/Services/JobSyncService.cs`.
+- [ ] `JobTestController` is `[AllowAnonymous]` and can enqueue jobs in production unless gated. See `xafhangfire.Blazor.Server/API/Jobs/JobTestController.cs`.
+- [ ] Report export/email output path collisions under concurrency (deterministic `{ReportName}.{ext}` paths). See `xafhangfire.Blazor.Server/Handlers/GenerateReportHandler.cs` and `xafhangfire.Blazor.Server/Handlers/SendReportEmailHandler.cs`.
+
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
 - [x] DemoLogCommand/Handler + ListUsersCommand/Handler
@@ -126,6 +134,7 @@
 
 ## Future
 - [ ] Add parameters to `ContactListByOrgReport` (e.g., Organization filter with ReportParametersObjectBase)
+- [ ] Create a `ReportParametersObjectBase` class for each report that has parameters, and register it with the 3-arg `AddPredefinedReport` so `ReportDataV2.ParametersObjectTypeName` is stored. See `xafhangfire/xafhangfire.Module/Reports/ProjectStatusReportParameters.cs` and `xafhangfire/xafhangfire.Module/Module.cs`.
 - [ ] Update `GenerateReportHandler` to use `ReportDataSourceHelperBase.SetupReport` with parameters object (currently uses XtraReport.Parameters directly which works fine)
 - [ ] Scheduler calendar view bound to JobDefinition
 - [ ] Expand test coverage (Blazor.Server handlers with mocked IReportExportService, integration tests)

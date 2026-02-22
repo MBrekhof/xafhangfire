@@ -1,4 +1,5 @@
 #nullable enable
+using DevExpress.XtraReports.Parameters;
 using DevExpress.XtraReports.UI;
 using Microsoft.Extensions.Logging;
 using xafhangfire.Jobs;
@@ -20,12 +21,24 @@ internal static class ReportParameterHelper
             // Try lookup by Name first, then fall back to Description
             // (XAF report designer may populate Description instead of Name)
             var param = report.Parameters[key]
-                ?? report.Parameters.Cast<DevExpress.XtraReports.Parameters.Parameter>()
+                ?? report.Parameters.Cast<Parameter>()
                     .FirstOrDefault(p => string.Equals(p.Description, key, StringComparison.OrdinalIgnoreCase));
+
+            // Auto-create the parameter if it doesn't exist on the report.
+            // This supports the ReportParametersObjectBase-only pattern where
+            // parameters are defined on the parameters class, not on the XtraReport.
+            // The FilterString ?-references still need a Parameter object at runtime.
             if (param is null)
             {
-                logger.LogWarning("Report parameter '{ParameterName}' not found — skipping", key);
-                continue;
+                var inferredType = InferType(value);
+                param = new Parameter
+                {
+                    Name = key,
+                    Type = inferredType,
+                    Visible = false
+                };
+                report.Parameters.Add(param);
+                logger.LogDebug("Auto-created report parameter '{Name}' (type: {Type})", key, inferredType.Name);
             }
 
             // Resolve friendly date terms (e.g., "last-month") via DateRangeResolver
@@ -46,6 +59,25 @@ internal static class ReportParameterHelper
             param.Value = ConvertValue(value, param.Type);
             logger.LogDebug("Set report parameter '{Name}' = {Value}", key, param.Value);
         }
+    }
+
+    /// <summary>
+    /// Infers the CLR type from a string value so auto-created parameters
+    /// get the correct type for FilterString evaluation.
+    /// </summary>
+    private static Type InferType(string value)
+    {
+        if (DateTime.TryParse(value, out _))
+            return typeof(DateTime);
+        if (int.TryParse(value, out _))
+            return typeof(int);
+        if (decimal.TryParse(value, out _))
+            return typeof(decimal);
+        if (bool.TryParse(value, out _))
+            return typeof(bool);
+        if (Guid.TryParse(value, out _))
+            return typeof(Guid);
+        return typeof(string);
     }
 
     private static bool TryResolveDateParameter(string value, string key, out DateOnly resolved)

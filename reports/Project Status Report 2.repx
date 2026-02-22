@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<XtraReportsLayoutSerializer SerializerVersion="25.2.3.0" Ref="1" ControlType="DevExpress.XtraReports.UI.XtraReport, DevExpress.XtraReports.v25.2, Version=25.2.3.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" Name="Report" DisplayName="Project Status Report 2" Landscape="true" PageWidthF="1100" PageHeightF="850" Version="25.2" RequestParameters="false" FilterString="[StartDate] &gt;= ?StartDate And [StartDate] &lt;= ?EndDate" DataSource="#Ref-0">
+  <Extensions>
+    <Item1 Ref="2" Key="DataSerializationExtension" Value="XtraReport" />
+    <Item2 Ref="3" Key="DataEditorExtension" Value="XtraReport" />
+    <Item3 Ref="4" Key="ParameterEditorExtension" Value="XtraReport" />
+  </Extensions>
+  <Parameters>
+    <Item1 Ref="6" Description="Start Date" ValueInfo="2000-01-01" Tag_type="System.String" Tag="tag" Name="StartDate" Type="#Ref-5" />
+    <Item2 Ref="7" Description="End Date" ValueInfo="02/22/2027 09:22:55" Tag_type="System.String" Tag="tag2" Name="EndDate" Type="#Ref-5" />
+  </Parameters>
+  <Bands>
+    <Item1 Ref="8" ControlType="TopMarginBand" Name="TopMargin1" />
+    <Item2 Ref="9" ControlType="ReportHeaderBand" Name="ReportHeader1" HeightF="60">
+      <Controls>
+        <Item1 Ref="10" ControlType="XRLabel" Name="label1" Text="Project Status Report" SizeF="700,30" LocationFloat="0,5" Font="Arial, 18pt, style=Bold" />
+        <Item2 Ref="11" ControlType="XRLabel" Name="label2" SizeF="700,20" LocationFloat="0,35" Font="Arial, 9pt, style=Italic">
+          <ExpressionBindings>
+            <Item1 Ref="12" EventName="BeforePrint" PropertyName="Text" Expression="'Generated: ' + Now()" />
+          </ExpressionBindings>
+        </Item2>
+      </Controls>
+    </Item2>
+    <Item3 Ref="13" ControlType="PageHeaderBand" Name="PageHeader1" HeightF="25">
+      <Controls>
+        <Item1 Ref="14" ControlType="XRLabel" Name="label3" Text="Project" SizeF="180,25" LocationFloat="0,0" Font="Arial, 9pt, style=Bold" ForeColor="White" BackColor="255,41,128,185" Padding="5,5,3,3,100" BorderColor="255,200,200,200" Borders="All" />
+        <Item2 Ref="15" ControlType="XRLabel" Name="label4" Text="Organization" SizeF="140,25" LocationFloat="180,0" Font="Arial, 9pt, style=Bold" ForeColor="White" BackColor="255,41,128,185" Padding="5,5,3,3,100" BorderColor="255,200,200,200" Borders="All" />
+        <Item3 Ref="16" ControlType="XRLabel" Name="label5" Text="Status" SizeF="100,25" LocationFloat="320,0" Font="Arial, 9pt, style=Bold" ForeColor="White" BackColor="255,41,128,185" Padding="5,5,3,3,100" BorderColor="255,200,200,200" Borders="All" />
+        <Item4 Ref="17" ControlType="XRLabel" Name="label6" Text="Start Date" SizeF="100,25" LocationFloat="420,0" Font="Arial, 9pt, style=Bold" ForeColor="White" BackColor="255,41,128,185" Padding="5,5,3,3,100" BorderColor="255,200,200,200" Borders="All" />
+        <Item5 Ref="18" ControlType="XRLabel" Name="label7" Text="Due Date" SizeF="100,25" LocationFloat="520,0" Font="Arial, 9pt, style=Bold" ForeColor="White" BackColor="255,41,128,185" Padding="5,5,3,3,100" BorderColor="255,200,200,200" Borders="All" />
+        <Item6 Ref="19" ControlType="XRLabel" Name="label8" Text="Description" SizeF="180,25" LocationFloat="620,0" Font="Arial, 9pt, style=Bold" ForeColor="White" BackColor="255,41,128,185" Padding="5,5,3,3,100" BorderColor="255,200,200,200" Borders="All" />
+      </Controls>
+    </Item3>
+    <Item4 Ref="20" ControlType="DetailBand" Name="Detail1" HeightF="25">
+      <Controls>
+        <Item1 Ref="21" ControlType="XRLabel" Name="label9" SizeF="180,25" LocationFloat="0,0" Font="Arial, 8pt" Padding="5,5,3,3,100" BorderColor="Gainsboro" Borders="All">
+          <ExpressionBindings>
+            <Item1 Ref="22" EventName="BeforePrint" PropertyName="Text" Expression="[Name]" />
+          </ExpressionBindings>
+        </Item1>
+        <Item2 Ref="23" ControlType="XRLabel" Name="label10" SizeF="140,25" LocationFloat="180,0" Font="Arial, 8pt" Padding="5,5,3,3,100" BorderColor="Gainsboro" Borders="All">
+          <ExpressionBindings>
+            <Item1 Ref="24" EventName="BeforePrint" PropertyName="Text" Expression="[Organization.Name]" />
+          </ExpressionBindings>
+        </Item2>
+        <Item3 Ref="25" ControlType="XRLabel" Name="label11" SizeF="100,25" LocationFloat="320,0" Font="Arial, 8pt" Padding="5,5,3,3,100" BorderColor="Gainsboro" Borders="All">
+          <ExpressionBindings>
+            <Item1 Ref="26" EventName="BeforePrint" PropertyName="Text" Expression="[Status]" />
+          </ExpressionBindings>
+        </Item3>
+        <Item4 Ref="27" ControlType="XRLabel" Name="label12" SizeF="100,25" LocationFloat="420,0" Font="Arial, 8pt" Padding="5,5,3,3,100" BorderColor="Gainsboro" Borders="All">
+          <ExpressionBindings>
+            <Item1 Ref="28" EventName="BeforePrint" PropertyName="Text" Expression="[StartDate]" />
+          </ExpressionBindings>
+        </Item4>
+        <Item5 Ref="29" ControlType="XRLabel" Name="label13" SizeF="100,25" LocationFloat="520,0" Font="Arial, 8pt" Padding="5,5,3,3,100" BorderColor="Gainsboro" Borders="All">
+          <ExpressionBindings>
+            <Item1 Ref="30" EventName="BeforePrint" PropertyName="Text" Expression="[DueDate]" />
+          </ExpressionBindings>
+        </Item5>
+        <Item6 Ref="31" ControlType="XRLabel" Name="label14" SizeF="180,25" LocationFloat="620,0" Font="Arial, 8pt" Padding="5,5,3,3,100" BorderColor="Gainsboro" Borders="All">
+          <ExpressionBindings>
+            <Item1 Ref="32" EventName="BeforePrint" PropertyName="Text" Expression="[Description]" />
+          </ExpressionBindings>
+        </Item6>
+      </Controls>
+    </Item4>
+    <Item5 Ref="33" ControlType="PageFooterBand" Name="PageFooter1" HeightF="25">
+      <Controls>
+        <Item1 Ref="34" ControlType="XRPageInfo" Name="pageInfo1" SizeF="200,20" LocationFloat="0,2" Font="Arial, 8pt" />
+      </Controls>
+    </Item5>
+    <Item6 Ref="35" ControlType="BottomMarginBand" Name="BottomMargin1" />
+  </Bands>
+  <ParameterPanelLayoutItems>
+    <Item1 Ref="36" LayoutItemType="Parameter" Parameter="#Ref-6" />
+    <Item2 Ref="37" LayoutItemType="Parameter" Parameter="#Ref-7" />
+  </ParameterPanelLayoutItems>
+  <ObjectStorage>
+    <Item1 ObjectType="DevExpress.XtraReports.Serialization.ObjectStorageInfo, DevExpress.XtraReports.v25.2" Ref="5" Content="System.DateTime" Type="System.Type" />
+    <Item2 Ref="0" Name="collectionDataSource1" ObjectTypeName="xafhangfire.Module.BusinessObjects.Project" ObjectType="DevExpress.Persistent.Base.ReportsV2.CollectionDataSource,DevExpress.Persistent.Base.v25.2" TopReturnedRecords="0">
+      <Sorting Ref="38" />
+    </Item2>
+  </ObjectStorage>
+</XtraReportsLayoutSerializer>
