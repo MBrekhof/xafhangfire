@@ -30,6 +30,8 @@
 
 **Session 14 (2026-02-22):** Fixed two bugs in report parameter auto-discovery UI. (1) **JSON persistence** — discovered parameters were set on the model fields but never serialized back to JSON, so they were lost on save/reload. Fixed by adding `SerializeFieldsToJson()` in the property editor that re-serializes fields after discovery and calls `WriteValue()`. (2) **DxTextBox rendering** — DevExpress `DxTextBox` components don't display their `Value` parameter when created dynamically during XAF Blazor adapter render cycles (shows NullText placeholders instead of actual values). Replaced with plain HTML `<input>` elements styled with a custom `kv-input` CSS class to match DevExpress Fluent theme. Cleaned up diagnostic logging. Build clean, all 70 tests pass.
 
+**Session 15 (2026-02-22):** Typed report parameter fields. Replaced generic key-value text editor with individual typed fields for report parameters: date pickers (`<input type="date">`), decimal spin edits (`DxSpinEdit<decimal>`), entity lookups (`DxComboBox` with DB-backed dropdown). Created `ContactListByOrgReportParameters` (ReportParametersObjectBase with Organization lookup + GetCriteria). Added `FilterString` to ContactListByOrgReport so job dispatcher can pass Organization Guid. Removed `[DomainComponent]` from all 7 EF Core entities (was incorrect — only for non-persistent objects). Added entity type detection via `[Key]` attribute and display text via `[DefaultProperty]`. Grouped field serialization into nested JSON dicts. Build clean, all 70 tests pass.
+
 ## FINDINGS
 - [ ] Authentication API likely blocked by default JWT policy (AuthenticationController lacks `[AllowAnonymous]` while default policy requires JWT). See `xafhangfire.Blazor.Server/API/Security/AuthenticationController.cs` and `xafhangfire.Blazor.Server/Startup.cs`.
 - [ ] Hangfire recurring job IDs collide per command type (Schedule uses `typeof(TCommand).Name`), so multiple JobDefinitions of same type overwrite each other. See `xafhangfire.Jobs/HangfireJobDispatcher.cs` and `xafhangfire.Blazor.Server/Services/JobSyncService.cs`.
@@ -131,10 +133,17 @@
 - [x] JSON persistence fix — `SerializeFieldsToJson()` re-serializes fields after discovery and calls `WriteValue()` so discovered params survive save/reload
 - [x] DxTextBox rendering workaround — replaced with plain HTML `<input>` elements for key-value editor (DxTextBox shows NullText placeholders when created dynamically in XAF adapter render cycle)
 - [x] `kv-input` CSS class for KV editor styling (matches DevExpress Fluent theme)
+- [x] Typed report parameter fields — individual date, decimal, bool, int, string fields (was generic key-value text inputs)
+- [x] Entity lookup support — navigation properties render as DxComboBox dropdowns backed by DB queries (IsEntityType, LoadLookupItems)
+- [x] ContactListByOrgReportParameters : ReportParametersObjectBase (Organization lookup + GetCriteria)
+- [x] ContactListByOrgReport FilterString + RequestParameters=false for job dispatcher compatibility
+- [x] 3-arg AddPredefinedReport with typeof(ContactListByOrgReportParameters) in Module.cs
+- [x] Removed `[DomainComponent]` from all 7 EF Core entities (Organization, Contact, Project, ProjectTask, EmailTemplate, JobDefinition, JobExecutionRecord)
+- [x] Grouped field serialization — fields with GroupName collect into nested JSON dicts
+- [x] Visual group headers in parameter form (FormatGroupName helper)
+- [x] LookupItem model class + "lookup" DxComboBox case in JobParametersForm.razor
 
 ## Future
-- [ ] Add parameters to `ContactListByOrgReport` (e.g., Organization filter with ReportParametersObjectBase)
-- [ ] Create a `ReportParametersObjectBase` class for each report that has parameters, and register it with the 3-arg `AddPredefinedReport` so `ReportDataV2.ParametersObjectTypeName` is stored. See `xafhangfire/xafhangfire.Module/Reports/ProjectStatusReportParameters.cs` and `xafhangfire/xafhangfire.Module/Module.cs`.
 - [ ] Update `GenerateReportHandler` to use `ReportDataSourceHelperBase.SetupReport` with parameters object (currently uses XtraReport.Parameters directly which works fine)
 - [ ] Scheduler calendar view bound to JobDefinition
 - [ ] Expand test coverage (Blazor.Server handlers with mocked IReportExportService, integration tests)
@@ -208,6 +217,7 @@ When resuming this project, read these files first:
 42. `docs/plans/2026-02-21-job-ui-improvements-plan.md` — job UI improvements plan
 
 43. `xafhangfire/xafhangfire.Module/Reports/ProjectStatusReportParameters.cs` — ReportParametersObjectBase descendant for Project Status Report
+44. `xafhangfire/xafhangfire.Module/Reports/ContactListByOrgReportParameters.cs` — ReportParametersObjectBase descendant for Contact List by Organization (Organization lookup)
 
 Then check the TODO list above to see what's done and what's next.
 
@@ -234,28 +244,32 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 - XtraReport `Parameter.Name` may be empty for some reports — `DiscoverReportParameters` falls back to `Description`. Debug with breakpoints if keys still empty.
 - `[System.ComponentModel.DataAnnotations.Required]` must be fully qualified in Module project — conflicts with `DevExpress.ExpressApp.Model.RequiredAttribute` when both usings are present.
 - **DevExpress `DxTextBox` does not render `Value` when created dynamically** in XAF Blazor adapter render cycles — shows NullText placeholders instead. Use plain HTML `<input type="text">` elements as workaround. This affects the key-value pair editor for report parameters. Other DxComponents (DxSpinEdit, DxCheckBox, DxComboBox, DxButton) work fine in the same context.
+- **`[DomainComponent]` is ONLY for non-persistent objects** (ReportParametersObjectBase subclasses, etc.) — NEVER put it on EF Core entities. XAF registers EF Core entities via `DbSet<T>` + `AdditionalExportedTypes`. Adding `[DomainComponent]` to EF Core entities confuses XAF's type system and breaks features like the report designer filter editor.
+- **XAF navigation properties don't need explicit FK properties** — `public virtual Organization Organization { get; set; }` is sufficient. EF Core creates a shadow FK (`OrganizationId`) automatically. However, shadow FKs may not be visible in some XAF tools (e.g., report designer filter editor) since they're not CLR properties.
 
-## Handoff Notes (Session 14 → Next Session)
+## Handoff Notes (Session 15 → Next Session)
 
-**Status:** All code committed and pushed on `master` (`a594620`). Build clean, all 70 tests pass. All documentation up to date (TODO.md, integration-guide.md, CLAUDE.md).
+**Status:** All code committed and pushed on `master` (`c76f09a`). Build clean, all 70 tests pass. All documentation up to date.
 
-**What's working (everything):**
-- Full job dispatcher POC: command/handler pattern, Direct + Hangfire dispatchers, admin UI
-- Report generation with parameter auto-discovery (ReportParametersObjectBase approach)
-- Email jobs with MailKit (single, report attachment, mail merge)
-- Progress reporting, consecutive failure tracking, execution history
-- Cron visualization, custom property editors (parameter form, JobTypeName dropdown)
-- JSON persistence of discovered report parameters
-- Key-value editor with plain HTML inputs styled to match DevExpress Fluent theme
+**What's working (everything from session 14 plus):**
+- Typed report parameter fields — date pickers, decimal spin edits, entity lookup dropdowns replace generic key-value text inputs
+- Entity lookup support — navigation properties (e.g., Organization) render as DxComboBox dropdowns backed by DB queries
+- ContactListByOrgReportParameters — proper ReportParametersObjectBase class with Organization lookup and GetCriteria()
+- ContactListByOrgReport — FilterString added so job dispatcher can pass Organization Guid parameter
+- `[DomainComponent]` removed from all 7 EF Core entities (was incorrect — only for non-persistent objects like ReportParametersObjectBase subclasses)
+- Grouped field serialization — typed fields serialize into nested JSON dicts (`{"ReportParameters": {"StartDate": "...", "Organization": "guid-here"}}`)
 
-**Key caveats:**
-- DxTextBox components do NOT work when created dynamically in the XAF Blazor adapter render cycle — use plain HTML `<input>` elements instead
-- The `SerializeFieldsToJson()` call at the end of `RefreshFields` is critical — without it, discovered params are set on model fields but never written to JSON
-- DevExpress packages pinned to 25.2.3 — update all 4 csproj files together
-- Module project needs `Microsoft.EntityFrameworkCore.SqlServer` for Model Editor (design-time only)
+**Key caveats (all previous caveats plus):**
+- `[DomainComponent]` is ONLY for non-persistent objects (ReportParametersObjectBase subclasses, etc.) — NEVER on EF Core entities. XAF registers EF Core entities via DbSet<T> + AdditionalExportedTypes.
+- XAF navigation properties don't need explicit FK properties — `public virtual Organization Organization { get; set; }` is sufficient, EF Core creates shadow FK `OrganizationId` automatically.
+- Entity type detection in parameter editor uses `[Key]` attribute; display text uses `[DefaultProperty]` attribute.
+- DxTextBox and DxDateEdit components do NOT work when created dynamically in the XAF Blazor adapter render cycle — use plain HTML `<input>` elements instead.
+- The `SerializeFieldsToJson()` call at the end of `RefreshFields` is critical — without it, discovered params are set on model fields but never written to JSON.
+- DevExpress packages pinned to 25.2.3 — update all 4 csproj files together.
+- Module project needs `Microsoft.EntityFrameworkCore.SqlServer` for Model Editor (design-time only).
 
 **Suggested next steps (see Future section above):**
-- Add parameters to `ContactListByOrgReport` (Organization filter with ReportParametersObjectBase)
 - Scheduler calendar view bound to JobDefinition
 - Real-time progress UI via SignalR
 - Expand test coverage (Blazor.Server handlers, integration tests)
+- Update GenerateReportHandler to use ReportDataSourceHelperBase.SetupReport with parameters object
