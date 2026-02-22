@@ -49,5 +49,8 @@ BenchmarkDotNet.Artifacts/
 **/reports/*.pdf
 **/reports/*.xlsx
 
+# Runtime logs
+*.log
+
 # MCP config (local)
 .mcp.json
