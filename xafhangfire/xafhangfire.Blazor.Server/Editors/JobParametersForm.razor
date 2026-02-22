@@ -1,5 +1,27 @@
 @using DevExpress.Blazor
 
+<style>
+    .kv-input {
+        border: 1px solid #d2d2d2;
+        border-radius: 2px;
+        padding: 5px 10px;
+        font-size: inherit;
+        line-height: 1.5;
+        color: inherit;
+        background-color: #fff;
+        transition: border-color 0.15s ease-in-out;
+        width: 100%;
+    }
+    .kv-input:focus {
+        outline: none;
+        border-color: #0d6efd;
+        box-shadow: none;
+    }
+    .kv-input::placeholder {
+        color: #adadad;
+    }
+</style>
+
 @if (ShowRawEditor)
 {
     <DxMemo Value="@RawJson"
@@ -36,15 +58,13 @@ else
                     <div class="border rounded p-2">
                         @foreach (var kvp in field.KeyValuePairs)
                         {
-                            <div class="d-flex gap-2 mb-1 align-items-center">
-                                <DxTextBox Value="@kvp.Key"
-                                           ValueChanged="@((string v) => OnKvKeyChanged(field, kvp, v))"
-                                           NullText="Key"
-                                           CssClass="flex-grow-1" />
-                                <DxTextBox Value="@kvp.Value"
-                                           ValueChanged="@((string v) => OnKvValueChanged(field, kvp, v))"
-                                           NullText="Value"
-                                           CssClass="flex-grow-1" />
+                            <div @key="kvp" class="d-flex gap-2 mb-1 align-items-center">
+                                <input type="text" class="kv-input flex-grow-1" placeholder="Key"
+                                       value="@kvp.Key"
+                                       @onchange="@(e => OnKvKeyChanged(field, kvp, e.Value?.ToString() ?? string.Empty))" />
+                                <input type="text" class="kv-input flex-grow-1" placeholder="Value"
+                                       value="@kvp.Value"
+                                       @onchange="@(e => OnKvValueChanged(field, kvp, e.Value?.ToString() ?? string.Empty))" />
                                 <DxButton RenderStyle="ButtonRenderStyle.Danger"
                                           RenderStyleMode="ButtonRenderStyleMode.Outline"
                                           IconCssClass="oi oi-trash"
