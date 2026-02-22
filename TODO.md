@@ -106,7 +106,7 @@
 - [x] ReportParameterHelper fallback to Description-based parameter lookup
 - [x] DevExpress packages pinned to 25.2.3 (was 25.2.*)
 - [x] Explicit Npgsql.EntityFrameworkCore.PostgreSQL + Microsoft.EntityFrameworkCore.Design in Win and Blazor.Server projects
-- [x] IDesignTimeDbContextFactory (xafhangfireDesignTimeDbContextFactory) for Model Editor PostgreSQL support
+- [x] DesignTimeDbContextFactory (xafhangfireDesignTimeDbContextFactory) for Model Editor support — uses XAF's base class + SqlServer package workaround
 - [x] 70 tests total (69 previous + 1 SendReportEmailCommand hint test)
 
 ## Future
@@ -202,6 +202,7 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 - The `JobParametersPropertyEditor` subscribes to `INotifyPropertyChanged` on the current object — this works because XAF EF Core entities use `ChangingAndChangedNotificationsWithOriginalValues` change tracking.
 - DevExpress packages are pinned to 25.2.3 (not wildcard). Update all 4 csproj files together when changing versions.
 - Both Win and Blazor.Server need explicit `Npgsql.EntityFrameworkCore.PostgreSQL` and `Microsoft.EntityFrameworkCore.Design` references — transitive deps from Module aren't enough for XAF Model Editor design-time.
+- **Model Editor requires `Microsoft.EntityFrameworkCore.SqlServer` in Module project** — XAF's `DesignTimeDbContextCreator` defaults to SQL Server regardless of `EFCoreProvider=PostgreSql;` connection string. The Model Editor only loads types, never connects to a DB. Use `DesignTimeDbContextFactory<T>` (XAF's base class), not `IDesignTimeDbContextFactory<T>`.
 - XtraReport `Parameter.Name` may be empty for some reports — `DiscoverReportParameters` falls back to `Description`. Debug with breakpoints if keys still empty.
 - `[System.ComponentModel.DataAnnotations.Required]` must be fully qualified in Module project — conflicts with `DevExpress.ExpressApp.Model.RequiredAttribute` when both usings are present.
 
@@ -211,11 +212,7 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 
 **Open issues to debug manually next session:**
 
-1. **XAF Model Editor still fails** — Added `IDesignTimeDbContextFactory` with `UseNpgsql()` and direct PostgreSQL provider references to Win/Blazor.Server projects, but the error persists. The factory is in `xafhangfireDbContext.cs`. May need to:
-   - Verify the factory is being found by the Model Editor (check assembly scanning)
-   - Try adding `Microsoft.EntityFrameworkCore.Proxies` to the Win project (for `UseChangeTrackingProxies`/`UseObjectSpaceLinkProxies`)
-   - Check if XAF's `DesignTimeDbContextCreator` overrides the standard `IDesignTimeDbContextFactory`
-   - Close and reopen Visual Studio after the csproj changes
+1. **XAF Model Editor — FIXED (Session 11)** — Root cause: XAF's `DesignTimeDbContextCreator` defaults to SQL Server (`EFCoreMsSqlProviderReflectionHelper`) regardless of `EFCoreProvider=PostgreSql;` connection string. Fix: (a) changed factory to `DesignTimeDbContextFactory<T>` (XAF's base class, not EF Core's `IDesignTimeDbContextFactory`), (b) added `<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>` to Module csproj, (c) added `Microsoft.EntityFrameworkCore.SqlServer` v8.0.18 to Module project as design-time workaround — the Model Editor only loads type info and never connects to the database.
 
 2. **Report parameter auto-discovery: key names are empty** — The editor correctly discovers the right NUMBER of parameters from XtraReport definitions, but `Parameter.Name` comes back empty. Added `Description` fallback but still not working. Next steps:
    - Add temporary debug logging or a breakpoint in `DiscoverReportParameters()` to inspect what `p.Name`, `p.Description`, and `p.Value` actually contain

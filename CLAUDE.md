@@ -81,9 +81,10 @@ Command/Handler + pluggable dispatcher. See `job-dispatcher-architecture.md` for
 2. Create handler in `Jobs/Handlers/` implementing `IJobHandler<MyCommand>`
 3. Register in `Blazor.Server/Startup.cs`: `services.AddJobHandler<MyCommand, MyHandler>()`
 
-### DevExpress 25.2 Gotcha
+### DevExpress 25.2 Gotchas
 
-`SizeAttribute` was removed. Use `FieldSizeAttribute` from `DevExpress.ExpressApp.DC` with `FieldSizeAttribute.Unlimited`.
+- `SizeAttribute` was removed. Use `FieldSizeAttribute` from `DevExpress.ExpressApp.DC` with `FieldSizeAttribute.Unlimited`.
+- **Model Editor + PostgreSQL:** XAF's `DesignTimeDbContextCreator` defaults to SQL Server (`EFCoreMsSqlProviderReflectionHelper`) regardless of the `EFCoreProvider=PostgreSql;` connection string prefix. The Module project must reference `Microsoft.EntityFrameworkCore.SqlServer` as a design-time workaround — the Model Editor only loads type info and never actually connects to the database. The design-time factory uses `DesignTimeDbContextFactory<T>` (from `DevExpress.ExpressApp.EFCore.DesignTime`), not EF Core's raw `IDesignTimeDbContextFactory<T>`.
 
 ### Security Model
 

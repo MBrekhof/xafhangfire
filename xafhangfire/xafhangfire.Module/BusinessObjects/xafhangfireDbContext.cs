@@ -4,8 +4,6 @@ using DevExpress.ExpressApp.EFCore.Updating;
 using DevExpress.Persistent.BaseImpl.EF;
 using DevExpress.Persistent.BaseImpl.EF.PermissionPolicy;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Design;
-
 namespace xafhangfire.Module.BusinessObjects
 {
     [TypesInfoInitializer(typeof(DbContextTypesInfoInitializer<xafhangfireEFCoreDbContext>))]
@@ -51,15 +49,9 @@ namespace xafhangfire.Module.BusinessObjects
     }
 
     // This factory creates DbContext for design-time services (Model Editor, database migrations).
-    public class xafhangfireDesignTimeDbContextFactory : IDesignTimeDbContextFactory<xafhangfireEFCoreDbContext>
+    public class xafhangfireDesignTimeDbContextFactory : DesignTimeDbContextFactory<xafhangfireEFCoreDbContext>
     {
-        public xafhangfireEFCoreDbContext CreateDbContext(string[] args)
-        {
-            var optionsBuilder = new DbContextOptionsBuilder<xafhangfireEFCoreDbContext>();
-            optionsBuilder.UseNpgsql("Host=localhost;Port=5433;Database=xafhangfire;Username=xafhangfire;Password=xafhangfire");
-            optionsBuilder.UseChangeTrackingProxies();
-            optionsBuilder.UseObjectSpaceLinkProxies();
-            return new xafhangfireEFCoreDbContext(optionsBuilder.Options);
-        }
+        protected override string ConnectionString =>
+            "EFCoreProvider=PostgreSql;Host=localhost;Port=5433;Database=xafhangfire;Username=xafhangfire;Password=xafhangfire";
     }
 }
