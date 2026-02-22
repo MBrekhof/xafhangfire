@@ -28,6 +28,8 @@
 
 **Session 13 (2026-02-22):** Implemented ReportParametersObjectBase approach (Approach B) for report parameter auto-discovery. Created `ProjectStatusReportParameters` class with StartDate/EndDate properties and `GetCriteria()`. Registered with 3-arg `AddPredefinedReport` in Module.cs. Rewrote `DiscoverReportParameters` to use `ParametersObjectTypeName` from `ReportDataV2` and reflect on the parameters object's public properties — no more XtraReport instantiation or IReportExportService.LoadReport for discovery. Kept XtraReport.Parameters fallback for reports without a parameters object. Database verified: `ParametersObjectTypeName` correctly populated. Build clean, all 70 tests pass.
 
+**Session 14 (2026-02-22):** Fixed two bugs in report parameter auto-discovery UI. (1) **JSON persistence** — discovered parameters were set on the model fields but never serialized back to JSON, so they were lost on save/reload. Fixed by adding `SerializeFieldsToJson()` in the property editor that re-serializes fields after discovery and calls `WriteValue()`. (2) **DxTextBox rendering** — DevExpress `DxTextBox` components don't display their `Value` parameter when created dynamically during XAF Blazor adapter render cycles (shows NullText placeholders instead of actual values). Replaced with plain HTML `<input>` elements styled with a custom `kv-input` CSS class to match DevExpress Fluent theme. Cleaned up diagnostic logging. Build clean, all 70 tests pass.
+
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
 - [x] DemoLogCommand/Handler + ListUsersCommand/Handler
@@ -118,6 +120,9 @@
 - [x] 3-arg AddPredefinedReport with typeof(ProjectStatusReportParameters) in Module.cs
 - [x] DiscoverReportParameters rewritten — primary path uses ParametersObjectTypeName + reflection, fallback uses XtraReport.Parameters
 - [x] RefreshPredefinedReports in Updater.cs ensures DB stays in sync with code
+- [x] JSON persistence fix — `SerializeFieldsToJson()` re-serializes fields after discovery and calls `WriteValue()` so discovered params survive save/reload
+- [x] DxTextBox rendering workaround — replaced with plain HTML `<input>` elements for key-value editor (DxTextBox shows NullText placeholders when created dynamically in XAF adapter render cycle)
+- [x] `kv-input` CSS class for KV editor styling (matches DevExpress Fluent theme)
 
 ## Future
 - [ ] Add parameters to `ContactListByOrgReport` (e.g., Organization filter with ReportParametersObjectBase)
@@ -219,35 +224,24 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 - **Model Editor requires `Microsoft.EntityFrameworkCore.SqlServer` in Module project** — XAF's `DesignTimeDbContextCreator` defaults to SQL Server regardless of `EFCoreProvider=PostgreSql;` connection string. The Model Editor only loads types, never connects to a DB. Use `DesignTimeDbContextFactory<T>` (XAF's base class), not `IDesignTimeDbContextFactory<T>`.
 - XtraReport `Parameter.Name` may be empty for some reports — `DiscoverReportParameters` falls back to `Description`. Debug with breakpoints if keys still empty.
 - `[System.ComponentModel.DataAnnotations.Required]` must be fully qualified in Module project — conflicts with `DevExpress.ExpressApp.Model.RequiredAttribute` when both usings are present.
+- **DevExpress `DxTextBox` does not render `Value` when created dynamically** in XAF Blazor adapter render cycles — shows NullText placeholders instead. Use plain HTML `<input type="text">` elements as workaround. This affects the key-value pair editor for report parameters. Other DxComponents (DxSpinEdit, DxCheckBox, DxComboBox, DxButton) work fine in the same context.
 
-## Handoff Notes (Session 10 → Next Session)
+## Handoff Notes (Session 14 → Next Session)
 
-**Status:** All code committed and pushed on `master` (`edbd1ae`). Session 10 addressed user testing feedback + infra fixes.
+**Status:** All code committed and pushed on `master`. Report parameter auto-discovery fully working end-to-end with JSON persistence and visual rendering.
 
-**Open issues to debug manually next session:**
+**What's working:**
+- ReportParametersObjectBase approach (Approach B) — auto-discovers parameters from `ParametersObjectTypeName` via reflection
+- JSON persistence — discovered parameters survive save/reload cycle
+- Key-value editor renders correctly with plain HTML inputs styled to match DevExpress Fluent theme
+- All other editors (DxSpinEdit, DxCheckBox, DxComboBox, DxButton, DxMemo) work correctly
+- Build clean, all 70 tests pass
 
-1. **XAF Model Editor — FIXED (Session 11)** — Root cause: XAF's `DesignTimeDbContextCreator` defaults to SQL Server (`EFCoreMsSqlProviderReflectionHelper`) regardless of `EFCoreProvider=PostgreSql;` connection string. Fix: (a) changed factory to `DesignTimeDbContextFactory<T>` (XAF's base class, not EF Core's `IDesignTimeDbContextFactory`), (b) added `<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>` to Module csproj, (c) added `Microsoft.EntityFrameworkCore.SqlServer` v8.0.18 to Module project as design-time workaround — the Model Editor only loads type info and never connects to the database.
+**Key caveats:**
+- DxTextBox components do NOT work when created dynamically in the XAF Blazor adapter render cycle — use plain HTML `<input>` elements instead
+- The `SerializeFieldsToJson()` call at the end of `RefreshFields` is critical — without it, discovered params are set on model fields but never written to JSON
 
-2. **Report parameter auto-discovery: key names are empty** — The editor correctly discovers the right NUMBER of parameters from XtraReport definitions, but `Parameter.Name` comes back empty. Added `Description` fallback but still not working. Next steps:
-   - Add temporary debug logging or a breakpoint in `DiscoverReportParameters()` to inspect what `p.Name`, `p.Description`, and `p.Value` actually contain
-   - Check the XtraReport design files to see how parameters are defined (Name vs Description)
-   - Try iterating with `for (int i = 0; i < report.Parameters.Count; i++)` and inspect via index
-   - Consider using `ToString()` or reflection to dump all Parameter properties
-   - Test with a simple report that has a manually-defined parameter with an explicit Name
-
-**What was verified working (from user testing):**
-- JobTypeName dropdown works
-- Report parameter auto-discovery finds the correct number of parameters
-- Execution record fields are read-only
-- Null values excluded from JSON serialization
-- DateTime display formats with HH:mm:ss
-
-**Key files changed in session 10:**
-- `xafhangfire.Module/BusinessObjects/JobExecutionRecord.cs` — hidden progress fields, read-only system fields
-- `xafhangfire.Module/BusinessObjects/xafhangfireDbContext.cs` — added IDesignTimeDbContextFactory
-- `xafhangfire.Blazor.Server/Editors/JobParametersPropertyEditor.cs` — report parameter auto-discovery + ReportName change detection
-- `xafhangfire.Blazor.Server/Handlers/ReportParameterHelper.cs` — Description fallback for parameter lookup
-- `xafhangfire.Jobs/CommandMetadataProvider.cs` — "KeyValue" → "ReportParameters" hint
-- `xafhangfire.Jobs.Tests/CommandMetadataProviderTests.cs` — updated hint tests
-- All 4 project csproj files — pinned DevExpress to 25.2.3, added explicit PostgreSQL provider to UI projects
-- `xafhangfire.Jobs/DirectJobDispatcher.cs` + `JobExecutor.cs` — WhenWritingNull JSON option
+**Key files from sessions 13-14:**
+- `xafhangfire.Module/Reports/ProjectStatusReportParameters.cs` — ReportParametersObjectBase descendant
+- `xafhangfire.Blazor.Server/Editors/JobParametersPropertyEditor.cs` — discovery + JSON persistence
+- `xafhangfire.Blazor.Server/Editors/JobParametersForm.razor` — plain HTML inputs for KV editor
