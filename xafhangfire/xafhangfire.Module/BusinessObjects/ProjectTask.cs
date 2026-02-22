@@ -26,7 +26,6 @@ namespace xafhangfire.Module.BusinessObjects
     [DefaultClassOptions]
     [NavigationItem("CRM")]
     [DefaultProperty(nameof(Title))]
-    [DomainComponent]
     public class ProjectTask
     {
         [Key]

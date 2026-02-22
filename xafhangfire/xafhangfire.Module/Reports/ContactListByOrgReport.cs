@@ -20,6 +20,9 @@ namespace xafhangfire.Module.Reports
             dataSource.Sorting.Add(new DevExpress.Xpo.SortProperty("Organization.Name", DevExpress.Xpo.DB.SortingDirection.Ascending));
             DataSource = dataSource;
 
+            FilterString = "[Organization.Id] = ?Organization";
+            RequestParameters = false;
+
             var reportHeader = new ReportHeaderBand { HeightF = 60 };
             Bands.Add(reportHeader);
 

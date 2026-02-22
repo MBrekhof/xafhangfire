@@ -30,8 +30,14 @@
 }
 else
 {
+    string currentGroup = null;
     @foreach (var field in Fields)
     {
+        if (field.GroupName != null && field.GroupName != currentGroup)
+        {
+            currentGroup = field.GroupName;
+            <div class="mt-3 mb-2 fw-bold text-muted border-bottom pb-1">@FormatGroupName(field.GroupName)</div>
+        }
         <div class="mb-2">
             <label class="xaf-field-caption">@field.DisplayName@(field.IsRequired ? " *" : "")</label>
             @switch (field.FieldType)
@@ -44,6 +50,28 @@ else
                 case "bool":
                     <DxCheckBox Checked="@field.BoolValue"
                                 CheckedChanged="@((bool v) => OnBoolChanged(field, v))" />
+                    break;
+                case "date":
+                    <input type="date" class="kv-input"
+                           value="@(field.DateTimeValue?.ToString("yyyy-MM-dd"))"
+                           @onchange="@(e => OnDateInputChanged(field, e.Value?.ToString()))" />
+                    break;
+                case "decimal":
+                    <DxSpinEdit Value="@field.DecimalValue"
+                                ValueChanged="@((decimal v) => OnDecimalChanged(field, v))"
+                                CssClass="w-100" />
+                    break;
+                case "lookup":
+                    <DxComboBox TData="LookupItem"
+                                TValue="string"
+                                Data="@field.LookupItems"
+                                Value="@field.StringValue"
+                                ValueChanged="@((string v) => OnStringChanged(field, v))"
+                                ValueFieldName="Id"
+                                TextFieldName="DisplayText"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                NullText="Select..."
+                                CssClass="w-100" />
                     break;
                 case "dropdown":
                     <DxComboBox Data="@field.DropdownItems"
@@ -130,6 +158,18 @@ else
         await NotifyJsonChanged();
     }
 
+    private async Task OnDateInputChanged(ParameterFieldModel field, string value)
+    {
+        field.DateTimeValue = DateTime.TryParse(value, out var dt) ? dt : null;
+        await NotifyJsonChanged();
+    }
+
+    private async Task OnDecimalChanged(ParameterFieldModel field, decimal value)
+    {
+        field.DecimalValue = value;
+        await NotifyJsonChanged();
+    }
+
     private async Task OnKvKeyChanged(ParameterFieldModel field, KeyValuePairModel kvp, string value)
     {
         kvp.Key = value;
@@ -163,8 +203,28 @@ else
     private string SerializeFields()
     {
         var dict = new Dictionary<string, object>();
+        var groups = new Dictionary<string, Dictionary<string, string>>();
+
         foreach (var field in Fields)
         {
+            if (field.GroupName != null)
+            {
+                if (!groups.TryGetValue(field.GroupName, out var groupDict))
+                {
+                    groupDict = new Dictionary<string, string>();
+                    groups[field.GroupName] = groupDict;
+                }
+                groupDict[field.Name] = field.FieldType switch
+                {
+                    "date" => field.DateTimeValue?.ToString("yyyy-MM-dd") ?? string.Empty,
+                    "int" => field.IntValue.ToString(),
+                    "decimal" => field.DecimalValue.ToString(),
+                    "bool" => field.BoolValue.ToString().ToLowerInvariant(),
+                    _ => field.StringValue ?? string.Empty,
+                };
+                continue;
+            }
+
             switch (field.FieldType)
             {
                 case "int":
@@ -199,7 +259,26 @@ else
                     break;
             }
         }
+
+        foreach (var (key, groupDict) in groups)
+        {
+            if (groupDict.Count > 0)
+                dict[key] = groupDict;
+        }
+
         return System.Text.Json.JsonSerializer.Serialize(dict,
             new System.Text.Json.JsonSerializerOptions { WriteIndented = false });
+    }
+
+    private static string FormatGroupName(string name)
+    {
+        var result = new System.Text.StringBuilder();
+        foreach (var c in name)
+        {
+            if (char.IsUpper(c) && result.Length > 0)
+                result.Append(' ');
+            result.Append(c);
+        }
+        return result.ToString();
     }
 }

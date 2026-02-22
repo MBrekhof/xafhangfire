@@ -22,7 +22,6 @@ namespace xafhangfire.Module.BusinessObjects
     [DefaultClassOptions]
     [NavigationItem("Jobs")]
     [DefaultProperty(nameof(Name))]
-    [DomainComponent]
     public class JobDefinition
     {
         [Key]

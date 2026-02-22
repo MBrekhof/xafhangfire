@@ -9,7 +9,6 @@ namespace xafhangfire.Module.BusinessObjects
     [DefaultClassOptions]
     [NavigationItem("CRM")]
     [DefaultProperty(nameof(Name))]
-    [DomainComponent]
     public class Organization
     {
         [Key]
@@ -34,8 +33,8 @@ namespace xafhangfire.Module.BusinessObjects
         [FieldSize(FieldSizeAttribute.Unlimited)]
         public virtual string Notes { get; set; }
 
-        public virtual IList<Contact> Contacts { get; set; } = new ObservableCollection<Contact>();
+        public virtual ObservableCollection<Contact> Contacts { get; set; } = new ObservableCollection<Contact>();
 
-        public virtual IList<Project> Projects { get; set; } = new ObservableCollection<Project>();
+        public virtual ObservableCollection<Project> Projects { get; set; } = new ObservableCollection<Project>();
     }
 }

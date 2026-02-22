@@ -58,7 +58,7 @@ namespace xafhangfire.Module
             predefinedReportsUpdater.AddPredefinedReport<Reports.ProjectStatusReport>(
                 "Project Status Report", typeof(BusinessObjects.Project), typeof(Reports.ProjectStatusReportParameters));
             predefinedReportsUpdater.AddPredefinedReport<Reports.ContactListByOrgReport>(
-                "Contact List by Organization", typeof(BusinessObjects.Contact));
+                "Contact List by Organization", typeof(BusinessObjects.Contact), typeof(Reports.ContactListByOrgReportParameters));
             return new ModuleUpdater[] { updater, predefinedReportsUpdater };
         }
         public override void Setup(XafApplication application)

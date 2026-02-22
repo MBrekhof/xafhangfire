@@ -43,6 +43,24 @@ public class ParameterFieldModel
     public bool BoolValue { get; set; }
     public List<KeyValuePairModel> KeyValuePairs { get; set; } = new();
     public List<string> DropdownItems { get; set; } = new();
+    public List<LookupItem> LookupItems { get; set; } = new();
+    public DateTime? DateTimeValue { get; set; }
+    public decimal DecimalValue { get; set; }
+    public string GroupName { get; set; }
+}
+
+public class DiscoveredParameterInfo
+{
+    public string Name { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public Type ClrType { get; set; } = typeof(string);
+    public string DefaultValue { get; set; } = string.Empty;
+}
+
+public class LookupItem
+{
+    public string Id { get; set; } = string.Empty;
+    public string DisplayText { get; set; } = string.Empty;
 }
 
 public class KeyValuePairModel

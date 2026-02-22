@@ -21,7 +21,6 @@ namespace xafhangfire.Module.BusinessObjects
     [DefaultClassOptions]
     [NavigationItem("CRM")]
     [DefaultProperty(nameof(Name))]
-    [DomainComponent]
     public class Project
     {
         [Key]
@@ -42,6 +41,6 @@ namespace xafhangfire.Module.BusinessObjects
 
         public virtual Organization Organization { get; set; }
 
-        public virtual IList<ProjectTask> Tasks { get; set; } = new ObservableCollection<ProjectTask>();
+        public virtual ObservableCollection<ProjectTask> Tasks { get; set; } = new ObservableCollection<ProjectTask>();
     }
 }

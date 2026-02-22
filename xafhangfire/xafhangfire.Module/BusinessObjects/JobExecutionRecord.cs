@@ -9,7 +9,6 @@ namespace xafhangfire.Module.BusinessObjects
     [DefaultClassOptions]
     [NavigationItem("Jobs")]
     [DefaultProperty(nameof(JobName))]
-    [DomainComponent]
     public class JobExecutionRecord
     {
         [Key]

@@ -8,7 +8,6 @@ namespace xafhangfire.Module.BusinessObjects
     [DefaultClassOptions]
     [NavigationItem("Email")]
     [DefaultProperty(nameof(Name))]
-    [DomainComponent]
     public class EmailTemplate
     {
         [Key]

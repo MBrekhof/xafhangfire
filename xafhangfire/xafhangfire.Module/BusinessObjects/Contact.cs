@@ -8,7 +8,6 @@ namespace xafhangfire.Module.BusinessObjects
     [DefaultClassOptions]
     [NavigationItem("CRM")]
     [DefaultProperty(nameof(FullName))]
-    [DomainComponent]
     public class Contact
     {
         [Key]

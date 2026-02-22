@@ -120,6 +120,80 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
 
         foreach (var param in metadata)
         {
+            // Handle ReportParameters: emit individual typed fields instead of keyvalue
+            if (param.DataSourceHint == "ReportParameters")
+            {
+                var reportName = ExtractReportNameFromValues(values);
+                if (!string.IsNullOrEmpty(reportName))
+                {
+                    var discovered = DiscoverReportParameters(reportName);
+                    if (discovered.Count > 0)
+                    {
+                        var existingValues = new Dictionary<string, string>();
+                        if (values.TryGetValue(param.Name, out var existingElement)
+                            && existingElement.ValueKind == JsonValueKind.Object)
+                        {
+                            foreach (var prop in existingElement.EnumerateObject())
+                            {
+                                existingValues[prop.Name] = prop.Value.ValueKind == JsonValueKind.String
+                                    ? prop.Value.GetString() ?? string.Empty
+                                    : prop.Value.GetRawText();
+                            }
+                        }
+
+                        foreach (var d in discovered)
+                        {
+                            var typedField = new ParameterFieldModel
+                            {
+                                Name = d.Name,
+                                DisplayName = d.DisplayName,
+                                GroupName = param.Name,
+                            };
+
+                            if (d.ClrType == typeof(DateTime) || d.ClrType == typeof(DateOnly))
+                                typedField.FieldType = "date";
+                            else if (d.ClrType == typeof(int))
+                                typedField.FieldType = "int";
+                            else if (d.ClrType == typeof(decimal) || d.ClrType == typeof(double) || d.ClrType == typeof(float))
+                                typedField.FieldType = "decimal";
+                            else if (d.ClrType == typeof(bool))
+                                typedField.FieldType = "bool";
+                            else if (IsEntityType(d.ClrType))
+                            {
+                                typedField.FieldType = "lookup";
+                                typedField.LookupItems = LoadLookupItems(d.ClrType);
+                            }
+                            else
+                                typedField.FieldType = "string";
+
+                            var valueStr = existingValues.TryGetValue(d.Name, out var v) ? v : d.DefaultValue;
+                            switch (typedField.FieldType)
+                            {
+                                case "date":
+                                    typedField.DateTimeValue = DateTime.TryParse(valueStr, out var dt) ? dt : null;
+                                    break;
+                                case "int":
+                                    typedField.IntValue = int.TryParse(valueStr, out var iv) ? iv : 0;
+                                    break;
+                                case "decimal":
+                                    typedField.DecimalValue = decimal.TryParse(valueStr, out var dec) ? dec : 0;
+                                    break;
+                                case "bool":
+                                    typedField.BoolValue = bool.TryParse(valueStr, out var b) && b;
+                                    break;
+                                case "lookup":
+                                default:
+                                    typedField.StringValue = valueStr;
+                                    break;
+                            }
+
+                            fields.Add(typedField);
+                        }
+                        continue;
+                    }
+                }
+            }
+
             var field = new ParameterFieldModel
             {
                 Name = param.Name,
@@ -192,29 +266,6 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
                 }
             }
 
-            // Auto-discover report parameters when hint is "ReportParameters"
-            if (param.DataSourceHint == "ReportParameters" && field.FieldType == "keyvalue")
-            {
-                var reportName = ExtractReportNameFromValues(values);
-                if (!string.IsNullOrEmpty(reportName))
-                {
-                    var discovered = DiscoverReportParameters(reportName);
-                    if (discovered.Count > 0)
-                    {
-                        // Merge: discovered parameters as base, overlay with existing user values
-                        var existingDict = field.KeyValuePairs
-                            .Where(p => !string.IsNullOrWhiteSpace(p.Key))
-                            .ToDictionary(p => p.Key, p => p.Value);
-
-                        field.KeyValuePairs = discovered.Select(d => new KeyValuePairModel
-                        {
-                            Key = d.Key,
-                            Value = existingDict.TryGetValue(d.Key, out var v) ? v : d.Value
-                        }).ToList();
-                    }
-                }
-            }
-
             fields.Add(field);
         }
 
@@ -230,7 +281,7 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
         }
     }
 
-    private List<KeyValuePairModel> DiscoverReportParameters(string reportName)
+    private List<DiscoveredParameterInfo> DiscoverReportParameters(string reportName)
     {
         try
         {
@@ -256,10 +307,12 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
                     return paramsType
                         .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
                         .Where(p => !baseProps.Contains(p.Name) && p.CanRead && p.CanWrite)
-                        .Select(p => new KeyValuePairModel
+                        .Select(p => new DiscoveredParameterInfo
                         {
-                            Key = p.Name,
-                            Value = GetDefaultValueString(p.PropertyType)
+                            Name = p.Name,
+                            DisplayName = FormatDisplayName(p.Name),
+                            ClrType = p.PropertyType,
+                            DefaultValue = GetDefaultValueString(p.PropertyType)
                         })
                         .ToList();
                 }
@@ -272,17 +325,19 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
                 if (reportType != null)
                 {
                     using var report = (DevExpress.XtraReports.UI.XtraReport)Activator.CreateInstance(reportType);
-                    var pairs = new List<KeyValuePairModel>();
+                    var infos = new List<DiscoveredParameterInfo>();
                     foreach (DevExpress.XtraReports.Parameters.Parameter p in report.Parameters)
                     {
                         if (!p.Visible || string.IsNullOrEmpty(p.Name)) continue;
-                        pairs.Add(new KeyValuePairModel
+                        infos.Add(new DiscoveredParameterInfo
                         {
-                            Key = p.Name,
-                            Value = p.Value?.ToString() ?? string.Empty
+                            Name = p.Name,
+                            DisplayName = p.Description ?? FormatDisplayName(p.Name),
+                            ClrType = p.Type,
+                            DefaultValue = p.Value?.ToString() ?? string.Empty
                         });
                     }
-                    if (pairs.Count > 0) return pairs;
+                    if (infos.Count > 0) return infos;
                 }
             }
 
@@ -314,6 +369,48 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
         if (type == typeof(bool))
             return "false";
         return string.Empty;
+    }
+
+    private static bool IsEntityType(Type type)
+    {
+        return type.IsClass && type != typeof(string)
+            && type.GetProperties().Any(p =>
+                Attribute.IsDefined(p, typeof(System.ComponentModel.DataAnnotations.KeyAttribute)));
+    }
+
+    private static string GetDefaultPropertyName(Type type)
+    {
+        var attr = type.GetCustomAttributes(typeof(System.ComponentModel.DefaultPropertyAttribute), true)
+            .OfType<System.ComponentModel.DefaultPropertyAttribute>()
+            .FirstOrDefault();
+        return attr?.Name ?? "Name";
+    }
+
+    private List<LookupItem> LoadLookupItems(Type entityType)
+    {
+        try
+        {
+            using var os = application.CreateObjectSpace(entityType);
+            var keyProp = entityType.GetProperties()
+                .First(p => Attribute.IsDefined(p, typeof(System.ComponentModel.DataAnnotations.KeyAttribute)));
+            var displayPropName = GetDefaultPropertyName(entityType);
+            var displayProp = entityType.GetProperty(displayPropName);
+
+            var objects = os.GetObjects(entityType, null, false);
+            var items = new List<LookupItem>();
+            foreach (var obj in objects)
+            {
+                var id = keyProp.GetValue(obj)?.ToString() ?? string.Empty;
+                var display = displayProp?.GetValue(obj)?.ToString() ?? id;
+                items.Add(new LookupItem { Id = id, DisplayText = display });
+            }
+            return items.OrderBy(x => x.DisplayText).ToList();
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "[ParamEditor] Failed to load lookup items for {Type}", entityType.Name);
+            return new();
+        }
     }
 
     private List<string> ResolveDropdownItems(string dataSourceHint)
@@ -416,8 +513,28 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
     private static string SerializeFieldsToJson(List<ParameterFieldModel> fields)
     {
         var dict = new Dictionary<string, object>();
+        var groups = new Dictionary<string, Dictionary<string, string>>();
+
         foreach (var field in fields)
         {
+            if (field.GroupName != null)
+            {
+                if (!groups.TryGetValue(field.GroupName, out var groupDict))
+                {
+                    groupDict = new Dictionary<string, string>();
+                    groups[field.GroupName] = groupDict;
+                }
+                groupDict[field.Name] = field.FieldType switch
+                {
+                    "date" => field.DateTimeValue?.ToString("yyyy-MM-dd") ?? string.Empty,
+                    "int" => field.IntValue.ToString(),
+                    "decimal" => field.DecimalValue.ToString(),
+                    "bool" => field.BoolValue.ToString().ToLowerInvariant(),
+                    _ => field.StringValue ?? string.Empty,
+                };
+                continue;
+            }
+
             switch (field.FieldType)
             {
                 case "int":
@@ -445,6 +562,13 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
                     break;
             }
         }
+
+        foreach (var (key, groupDict) in groups)
+        {
+            if (groupDict.Count > 0)
+                dict[key] = groupDict;
+        }
+
         return JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = false });
     }
 
