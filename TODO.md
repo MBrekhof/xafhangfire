@@ -228,20 +228,25 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 
 ## Handoff Notes (Session 14 → Next Session)
 
-**Status:** All code committed and pushed on `master`. Report parameter auto-discovery fully working end-to-end with JSON persistence and visual rendering.
+**Status:** All code committed and pushed on `master` (`a594620`). Build clean, all 70 tests pass. All documentation up to date (TODO.md, integration-guide.md, CLAUDE.md).
 
-**What's working:**
-- ReportParametersObjectBase approach (Approach B) — auto-discovers parameters from `ParametersObjectTypeName` via reflection
-- JSON persistence — discovered parameters survive save/reload cycle
-- Key-value editor renders correctly with plain HTML inputs styled to match DevExpress Fluent theme
-- All other editors (DxSpinEdit, DxCheckBox, DxComboBox, DxButton, DxMemo) work correctly
-- Build clean, all 70 tests pass
+**What's working (everything):**
+- Full job dispatcher POC: command/handler pattern, Direct + Hangfire dispatchers, admin UI
+- Report generation with parameter auto-discovery (ReportParametersObjectBase approach)
+- Email jobs with MailKit (single, report attachment, mail merge)
+- Progress reporting, consecutive failure tracking, execution history
+- Cron visualization, custom property editors (parameter form, JobTypeName dropdown)
+- JSON persistence of discovered report parameters
+- Key-value editor with plain HTML inputs styled to match DevExpress Fluent theme
 
 **Key caveats:**
 - DxTextBox components do NOT work when created dynamically in the XAF Blazor adapter render cycle — use plain HTML `<input>` elements instead
 - The `SerializeFieldsToJson()` call at the end of `RefreshFields` is critical — without it, discovered params are set on model fields but never written to JSON
+- DevExpress packages pinned to 25.2.3 — update all 4 csproj files together
+- Module project needs `Microsoft.EntityFrameworkCore.SqlServer` for Model Editor (design-time only)
 
-**Key files from sessions 13-14:**
-- `xafhangfire.Module/Reports/ProjectStatusReportParameters.cs` — ReportParametersObjectBase descendant
-- `xafhangfire.Blazor.Server/Editors/JobParametersPropertyEditor.cs` — discovery + JSON persistence
-- `xafhangfire.Blazor.Server/Editors/JobParametersForm.razor` — plain HTML inputs for KV editor
+**Suggested next steps (see Future section above):**
+- Add parameters to `ContactListByOrgReport` (Organization filter with ReportParametersObjectBase)
+- Scheduler calendar view bound to JobDefinition
+- Real-time progress UI via SignalR
+- Expand test coverage (Blazor.Server handlers, integration tests)
