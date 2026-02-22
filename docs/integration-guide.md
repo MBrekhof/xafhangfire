@@ -321,7 +321,111 @@ public sealed class XafJobScopeInitializer(
 
 Create the `HangfireJob` user in your `Updater.cs` with a role that has read-only access to the types your handlers need.
 
-## Step 5: Common Gotchas
+## Step 5: Progress Reporting
+
+Handlers can report progress during long-running operations via `IJobProgressReporter`:
+
+```csharp
+public interface IJobProgressReporter
+{
+    Task ReportProgressAsync(int percent, string? message = null, CancellationToken cancellationToken = default);
+    void Initialize(Guid executionRecordId);
+}
+```
+
+Inject it into handlers and call `ReportProgressAsync` during execution loops. `XafJobProgressReporter` updates the `JobExecutionRecord.ProgressPercent` and `ProgressMessage` fields. Use `NullJobProgressReporter` as a no-op default for tests.
+
+## Step 6: Consecutive Failure Tracking
+
+`JobDefinition` has a `ConsecutiveFailures` counter — incremented by `XafJobExecutionRecorder` on failure, reset on success. When it reaches a configurable threshold (`Jobs:FailureAlertThreshold`, default 3), a warning is logged:
+
+```csharp
+if (jobDef.ConsecutiveFailures >= threshold)
+    logger.LogWarning("Job '{Name}' has failed {Count} consecutive times", jobDef.Name, jobDef.ConsecutiveFailures);
+```
+
+## Step 7: Cron Visualization
+
+`CronHelper` (in Module project) uses Cronos + CronExpressionDescriptor to provide human-readable cron descriptions and next run times. `JobDefinition` exposes two `[NotMapped]` computed properties:
+
+- `CronDescription` — e.g., "Every day at 2:00 AM"
+- `NextScheduledRuns` — next 5 occurrences formatted as a multi-line string
+
+## Step 8: Custom Property Editors (Blazor)
+
+### Parameter Editor
+
+The `JobParametersPropertyEditor` replaces the raw JSON textarea with typed form fields. It uses `CommandMetadataProvider` to reflect on command record constructors and discover parameters with types, defaults, and `DataSourceHint` annotations.
+
+**Pattern:** `BlazorPropertyEditorBase` + `ComponentModelBase` + Razor component:
+- `JobParametersPropertyEditor.cs` — the editor class, implements `IComplexViewItem` for `XafApplication` access
+- `JobParametersFormModel.cs` — `ComponentModelBase` descendant with `Fields`, `ShowRawEditor`, `RawJson` properties
+- `JobParametersForm.razor` — renders typed fields (DxSpinEdit, DxCheckBox, DxComboBox, key-value rows, DxMemo)
+
+Connect via `[EditorAlias("JobParametersEditor")]` on the `ParametersJson` property.
+
+### JobTypeName Dropdown
+
+`JobTypeNamePropertyEditor` renders `JobTypeName` as a DxComboBox populated from `CommandMetadataProvider.GetRegisteredTypeNames()`. Same BlazorPropertyEditorBase + ComponentModelBase + Razor pattern.
+
+### DataSourceHint
+
+`CommandParameterMetadata` has a `DataSourceHint` string that drives editor selection:
+- `"Reports"` — dropdown populated from `ReportDataV2.DisplayName`
+- `"EmailTemplates"` — dropdown populated from `EmailTemplate.Name`
+- `"Pdf,Xlsx"` — static comma-separated values for dropdown
+- `"ReportParameters"` — key-value editor with report parameter auto-discovery
+- `"KeyValue"` — plain key-value editor (add/remove rows)
+
+## Step 9: Report Parameter Auto-Discovery
+
+When a user selects a `ReportName`, the parameter editor auto-discovers report parameters and pre-populates key-value rows.
+
+### Setup
+
+1. Create a `ReportParametersObjectBase` descendant:
+
+```csharp
+[DomainComponent]
+public class MyReportParameters : ReportParametersObjectBase
+{
+    public DateTime StartDate { get; set; } = new DateTime(2000, 1, 1);
+    public DateTime EndDate { get; set; } = DateTime.Now.AddYears(1);
+
+    public MyReportParameters(IObjectSpaceCreator provider) : base(provider) { }
+
+    protected override IObjectSpace CreateObjectSpace()
+        => objectSpaceCreator.CreateObjectSpace(typeof(MyEntity));
+
+    public override CriteriaOperator GetCriteria()
+        => CriteriaOperator.Parse("[StartDate] >= ? And [StartDate] <= ?", StartDate, EndDate);
+
+    public override SortProperty[] GetSorting() => null;
+}
+```
+
+2. Register with the 3-arg `AddPredefinedReport` overload in `Module.cs`:
+
+```csharp
+predefinedReportsUpdater.AddPredefinedReport<MyReport>(
+    "My Report", typeof(MyEntity), typeof(MyReportParameters));
+```
+
+### How Discovery Works
+
+`DiscoverReportParameters` in `JobParametersPropertyEditor`:
+1. Queries `ReportDataV2.ParametersObjectTypeName` for the selected report
+2. Resolves the type via `Type.GetType` + assembly scan
+3. Reflects on public properties (excluding `ReportParametersObjectBase` base properties)
+4. Returns `KeyValuePairModel` list with property names and type-appropriate defaults
+
+**Fallback:** If no `ParametersObjectTypeName`, instantiates the report from `PredefinedReportTypeName` and inspects `XtraReport.Parameters`.
+
+### JSON Persistence
+
+After discovery, `RefreshFields` calls `SerializeFieldsToJson()` to re-serialize fields back to JSON and persist via `WriteValue()`. Without this, discovered params are set on model fields but lost on save/reload.
+
+## Step 10: Common Gotchas
 
 | Issue | Solution |
 |-------|----------|
@@ -332,11 +436,17 @@ Create the `HangfireJob` user in your `Updater.cs` with a role that has read-onl
 | PostgreSQL DateTime issues | Set `Npgsql.EnableLegacyTimestampBehavior = true` in `Startup.ConfigureServices` |
 | Connection string for Hangfire | Strip the `EFCoreProvider=PostgreSql;` prefix — Hangfire needs a raw Npgsql string |
 | DI scope issues in DirectJobDispatcher | Use `IServiceScopeFactory` to create fresh scopes, not the root `IServiceProvider` |
+| DevExpress packages version pinning | Pin to exact version (e.g., 25.2.3) across all 4 csproj files — wildcard versions cause restore issues |
+| Model Editor + PostgreSQL | Module needs `Microsoft.EntityFrameworkCore.SqlServer` as design-time workaround. Use XAF's `DesignTimeDbContextFactory<T>` base class |
+| DxTextBox in dynamic XAF rendering | DxTextBox shows NullText placeholders when created dynamically in XAF Blazor adapter render cycles. Use plain HTML `<input>` elements instead. Other DxComponents (DxSpinEdit, DxCheckBox, DxComboBox) work fine |
+| `[Required]` attribute conflicts | Fully qualify `[System.ComponentModel.DataAnnotations.Required]` in Module — conflicts with `DevExpress.ExpressApp.Model.RequiredAttribute` |
 
-## Step 6: Optional Enhancements
+## Step 11: Optional Enhancements
 
 - **Email jobs**: Add MailKit for SMTP, `IEmailSender` interface with log-only fallback
 - **Report generation**: Use `IReportExportService` to export XtraReports in handlers
 - **Report parameters**: Pass `Dictionary<string, string>` and apply to `XtraReport.Parameters`
 - **Date range resolution**: Use `DateRangeResolver` for friendly date terms in parameters
 - **Job sync service**: `IHostedService` that syncs enabled `JobDefinition` cron schedules to Hangfire on startup
+- **Real-time progress UI**: SignalR push of progress updates to XAF detail view
+- **Email failure alerts**: Extend consecutive failure tracking to send alert emails
