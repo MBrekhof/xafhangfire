@@ -30,6 +30,21 @@ internal static class ReportParameterHelper
             // The FilterString ?-references still need a Parameter object at runtime.
             if (param is null)
             {
+                if (TryResolveDateParameter(value, key, out var resolvedDate))
+                {
+                    param = new Parameter
+                    {
+                        Name = key,
+                        Type = typeof(DateTime),
+                        Visible = false,
+                        Value = resolvedDate.ToDateTime(TimeOnly.MinValue)
+                    };
+                    report.Parameters.Add(param);
+                    logger.LogDebug("Auto-created report parameter '{Name}' as DateTime = {Value}",
+                        key, param.Value);
+                    continue;
+                }
+
                 var inferredType = InferType(value);
                 param = new Parameter
                 {
@@ -87,8 +102,9 @@ internal static class ReportParameterHelper
         try
         {
             var range = DateRangeResolver.Resolve(value);
-            // Use Start for parameters ending with "Start"/"From", End for "End"/"To"
+            // Use Start for parameters ending with "Start"/"From", End for "End"/"EndDate"/"To"
             resolved = key.EndsWith("End", StringComparison.OrdinalIgnoreCase)
+                     || key.EndsWith("EndDate", StringComparison.OrdinalIgnoreCase)
                      || key.EndsWith("To", StringComparison.OrdinalIgnoreCase)
                 ? range.End
                 : range.Start;

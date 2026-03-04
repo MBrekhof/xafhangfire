@@ -196,78 +196,8 @@ else
 
     private async Task NotifyJsonChanged()
     {
-        var json = SerializeFields();
+        var json = JobParametersJsonSerializer.SerializeFields(Fields);
         await RawJsonChanged.InvokeAsync(json);
-    }
-
-    private string SerializeFields()
-    {
-        var dict = new Dictionary<string, object>();
-        var groups = new Dictionary<string, Dictionary<string, string>>();
-
-        foreach (var field in Fields)
-        {
-            if (field.GroupName != null)
-            {
-                if (!groups.TryGetValue(field.GroupName, out var groupDict))
-                {
-                    groupDict = new Dictionary<string, string>();
-                    groups[field.GroupName] = groupDict;
-                }
-                groupDict[field.Name] = field.FieldType switch
-                {
-                    "date" => field.DateTimeValue?.ToString("yyyy-MM-dd") ?? string.Empty,
-                    "int" => field.IntValue.ToString(),
-                    "decimal" => field.DecimalValue.ToString(),
-                    "bool" => field.BoolValue.ToString().ToLowerInvariant(),
-                    _ => field.StringValue ?? string.Empty,
-                };
-                continue;
-            }
-
-            switch (field.FieldType)
-            {
-                case "int":
-                    dict[field.Name] = field.IntValue;
-                    break;
-                case "bool":
-                    dict[field.Name] = field.BoolValue;
-                    break;
-                case "keyvalue":
-                    var kvDict = new Dictionary<string, string>();
-                    foreach (var kvp in field.KeyValuePairs)
-                    {
-                        if (!string.IsNullOrWhiteSpace(kvp.Key))
-                            kvDict[kvp.Key] = kvp.Value;
-                    }
-                    if (kvDict.Count > 0)
-                        dict[field.Name] = kvDict;
-                    break;
-                case "json":
-                    try
-                    {
-                        dict[field.Name] = System.Text.Json.JsonSerializer.Deserialize<object>(field.StringValue);
-                    }
-                    catch
-                    {
-                        dict[field.Name] = field.StringValue;
-                    }
-                    break;
-                default: // string, dropdown
-                    if (!string.IsNullOrEmpty(field.StringValue))
-                        dict[field.Name] = field.StringValue;
-                    break;
-            }
-        }
-
-        foreach (var (key, groupDict) in groups)
-        {
-            if (groupDict.Count > 0)
-                dict[key] = groupDict;
-        }
-
-        return System.Text.Json.JsonSerializer.Serialize(dict,
-            new System.Text.Json.JsonSerializerOptions { WriteIndented = false });
     }
 
     private static string FormatGroupName(string name)

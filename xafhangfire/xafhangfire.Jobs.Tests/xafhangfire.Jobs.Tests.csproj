@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\xafhangfire.Blazor.Server\xafhangfire.Blazor.Server.csproj" />
     <ProjectReference Include="..\xafhangfire.Jobs\xafhangfire.Jobs.csproj" />
     <ProjectReference Include="..\xafhangfire.Module\xafhangfire.Module.csproj" />
   </ItemGroup>

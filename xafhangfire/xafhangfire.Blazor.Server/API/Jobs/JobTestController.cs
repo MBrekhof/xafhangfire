@@ -7,7 +7,7 @@ namespace xafhangfire.Blazor.Server.API.Jobs;
 
 [ApiController]
 [Route("api/jobs")]
-[AllowAnonymous]
+[Authorize]
 public sealed class JobTestController(IJobDispatcher dispatcher) : ControllerBase
 {
     [HttpPost("demo-log")]
