@@ -17,3 +17,7 @@
 - [x] Clearing ReportName turns the old report's parameters into key/value rows. Fixed in `a722a31`. (ID: 2573)
 - [x] Decimal report parameters are parsed with the server culture. Fixed in `a722a31`. (ID: 2574)
 - [x] Batch-1 tests that passed against the old code. Fixed in `a722a31`. (ID: 2576)
+- [x] Email notifications on repeated failures. Fixed in `bffc7e1`. (ID: 2562)
+- [x] Hangfire retries count toward the failure-alert threshold. Closed with no change: every failed attempt keeps counting (decision 1a). (ID: 2582)
+- [x] Update GenerateReportHandler to use ReportDataSourceHelperBase.SetupReport. Closed with no change (decision 2a). (ID: 2558)
+- [x] Verify jobs persist across app restarts. Verified by a kill-and-restart test, no code change: all 25 jobs survived. (ID: 2563)

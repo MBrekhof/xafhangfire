@@ -38,7 +38,14 @@
 - [ ] Run Now in the WinForms app fails because JobDispatchService isn't registered there (unverified) (ID: 2578)
 - [ ] Jobs interrupted by an app crash/restart resume only after 30 minutes (ID: 2579)
 - [ ] Vulnerable transitive packages: MessagePack 3.1.4, System.Security.Cryptography.Xml/Pkcs 8.0.x (ID: 2581)
-- [ ] Hangfire retries count toward the failure-alert threshold (ID: 2582)
+- [ ] Execution records of crash-interrupted runs stay Running forever (ID: 2583)
+- [ ] A graceful shutdown or cancellation is recorded as a job failure (unverified) (ID: 2584)
+- [ ] A recurring job can run concurrently with itself (unverified) (ID: 2585)
+- [ ] Upgrade to .NET 10, DevExpress 26.1.6, EF Core 10, Npgsql 10 (ID: 2586)
+- [ ] The Win app does not set Npgsql.EnableLegacyTimestampBehavior (unverified) (ID: 2587)
+- [ ] Job definition editing in WinForms is degraded (unverified) (ID: 2588)
+- [ ] Hangfire never deletes finished jobs from its queue (legacy timestamps vs fetchedat) (ID: 2589)
+- [ ] Run Now on a nested JobDefinition list would only save to the parent ObjectSpace (unverified) (ID: 2590)
 
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
@@ -144,12 +151,9 @@
 - [x] LookupItem model class + "lookup" DxComboBox case in JobParametersForm.razor
 
 ## Future
-- [ ] Update `GenerateReportHandler` to use `ReportDataSourceHelperBase.SetupReport` with parameters object (currently uses XtraReport.Parameters directly which works fine) (ID: 2558)
 - [ ] Scheduler calendar view bound to JobDefinition (ID: 2559)
 - [ ] Expand test coverage (Blazor.Server handlers with mocked IReportExportService, integration tests) (ID: 2560)
 - [ ] Real-time progress UI (SignalR push of progress updates to XAF detail view) (ID: 2561)
-- [ ] Email notifications on repeated failures (extend failure tracking to send alert emails) (ID: 2562)
-- [ ] Verify jobs persist across app restarts (manual test) (ID: 2563)
 
 ## Architecture Decisions
 - Hangfire stays **embedded in Blazor.Server** (no separate service). Split later if needed.
