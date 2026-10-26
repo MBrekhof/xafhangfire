@@ -33,7 +33,6 @@
 **Session 15 (2026-02-22):** Typed report parameter fields. Replaced generic key-value text editor with individual typed fields for report parameters: date pickers (`<input type="date">`), decimal spin edits (`DxSpinEdit<decimal>`), entity lookups (`DxComboBox` with DB-backed dropdown). Created `ContactListByOrgReportParameters` (ReportParametersObjectBase with Organization lookup + GetCriteria). Added `FilterString` to ContactListByOrgReport so job dispatcher can pass Organization Guid. Removed `[DomainComponent]` from all 7 EF Core entities (was incorrect — only for non-persistent objects). Added entity type detection via `[Key]` attribute and display text via `[DefaultProperty]`. Grouped field serialization into nested JSON dicts. Build clean, all 70 tests pass.
 
 ## FINDINGS
-- [ ] Authentication API likely blocked by default JWT policy (AuthenticationController lacks `[AllowAnonymous]` while default policy requires JWT). See `xafhangfire.Blazor.Server/API/Security/AuthenticationController.cs` and `xafhangfire.Blazor.Server/Startup.cs`. (ID: 2553)
 - [ ] Hangfire recurring job IDs collide per command type (Schedule uses `typeof(TCommand).Name`), so multiple JobDefinitions of same type overwrite each other. See `xafhangfire.Jobs/HangfireJobDispatcher.cs` and `xafhangfire.Blazor.Server/Services/JobSyncService.cs`. (ID: 2554)
 - [ ] Execution records probably don't link to JobDefinition because recorder matches `JobDefinition.Name` but executor passes `commandType` as job name. See `xafhangfire.Jobs/JobExecutor.cs` and `xafhangfire.Blazor.Server/Services/XafJobExecutionRecorder.cs`. (ID: 2555)
 - [ ] Disabled/deleted JobDefinitions do not remove existing Hangfire recurring jobs (sync only adds on startup). See `xafhangfire.Blazor.Server/Services/JobSyncService.cs`. (ID: 2556)
@@ -44,8 +43,13 @@
 - [ ] Parameter editor wipes relative date terms ("last-month") on load (ID: 2565)
 - [ ] Empty Organization lookup breaks Contact List report filter (ID: 2566)
 - [ ] HangfireJob service user has an empty password; not seeded at all in Release builds (ID: 2568)
-- [ ] ReportController `[ValidateAntiForgeryToken]` may reject JWT Bearer GETs (ID: 2569)
 - [ ] RunNow overwrites the finished status with Running in Direct mode (ID: 2570)
+- [ ] Clearing ReportName turns the old report's parameters into key/value rows (ID: 2573)
+- [ ] Decimal report parameters are parsed with the server culture (ID: 2574)
+- [ ] A previous failure's message stays visible while the job runs again (ID: 2575)
+- [ ] Batch-1 tests that passed against the old code (ID: 2576)
+- [ ] Parameter form loop has no @key and the term select has no bound value (unverified) (ID: 2577)
+- [ ] Run Now in the WinForms app fails because JobDispatchService isn't registered there (unverified) (ID: 2578)
 
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
