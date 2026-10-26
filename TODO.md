@@ -34,13 +34,9 @@
 
 ## FINDINGS
 - [x] `JobTestController` is `[AllowAnonymous]` and can enqueue jobs in production unless gated. See `xafhangfire.Blazor.Server/API/Jobs/JobTestController.cs`. Fixed in `1f795e3` (`[Authorize]` + test).
-- [ ] Parameter form loop has no @key and the date-term dropdown has no bound value (unverified) (ID: 2577)
 - [ ] Run Now in the WinForms app fails because JobDispatchService isn't registered there (unverified) (ID: 2578)
 - [ ] Jobs interrupted by an app crash/restart resume only after 30 minutes (ID: 2579)
 - [ ] Vulnerable transitive packages: MessagePack 3.1.4, System.Security.Cryptography.Xml/Pkcs 8.0.x (ID: 2581)
-- [ ] Execution records of crash-interrupted runs stay Running forever (ID: 2583)
-- [ ] A graceful shutdown or cancellation is recorded as a job failure (unverified) (ID: 2584)
-- [ ] A recurring job can run concurrently with itself (unverified) (ID: 2585)
 - [ ] Upgrade to .NET 10, DevExpress 26.1.6, EF Core 10, Npgsql 10 (ID: 2586)
 - [ ] The Win app does not set Npgsql.EnableLegacyTimestampBehavior (unverified) (ID: 2587)
 - [ ] Job definition editing in WinForms is degraded (unverified) (ID: 2588)

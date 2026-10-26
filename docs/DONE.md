@@ -1,6 +1,10 @@
 # DONE
 
 ## 2026-10-26
+- [x] UI-005: Parameter form loop has no @key / date-term select unbound. Not reproduced (two Playwright scenarios), no code change. (ID: 2577)
+- [x] JOB-010: Execution records of crash-interrupted runs stay Running forever. Fixed in `e72d36c`. (ID: 2583)
+- [x] JOB-011: A graceful shutdown or cancellation is recorded as a job failure. Fixed in `11a8385`. (ID: 2584)
+- [x] JOB-012: A recurring job can run concurrently with itself. Reproduced; closed as by-design (Martin, 3c). (ID: 2585)
 - [x] Authentication API likely blocked by default JWT policy. Refuted by repro: a bad-credentials POST returns XAF's 401. (ID: 2553)
 - [x] ReportController `[ValidateAntiForgeryToken]` may reject JWT Bearer GETs. Refuted by repro: a Bearer-only GET returns 200 and a PDF. (ID: 2569)
 - [x] HangfireJob service user has an empty password; not seeded at all in Release builds. Fixed in `971427f`. (ID: 2568)
