@@ -28,10 +28,13 @@ public sealed class GenerateReportHandler(
         reportExportService.SetupReport(report);
         ReportParameterHelper.ApplyParameters(report, command.ReportParameters, logger);
 
-        var outputPath = command.OutputPath
-            ?? Path.Combine(
+        // Default file names are unique per run: concurrent runs of the same report must not
+        // share (and lock or overwrite) one file (RPT-001). An explicit OutputPath is the caller's call.
+        var outputPath = !string.IsNullOrWhiteSpace(command.OutputPath)
+            ? command.OutputPath
+            : Path.Combine(
                 ResolveOutputDirectory(),
-                $"{command.ReportName}.{command.OutputFormat.ToLowerInvariant()}");
+                $"{command.ReportName}_{DateTime.Now:yyyyMMdd-HHmmss}_{Guid.NewGuid().ToString("N")[..8]}.{command.OutputFormat.ToLowerInvariant()}");
 
         var outputDir = Path.GetDirectoryName(outputPath)!;
         Directory.CreateDirectory(outputDir);
