@@ -26,7 +26,7 @@ public class DirectJobDispatcherTests
         _sut = new DirectJobDispatcher(provider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<DirectJobDispatcher>.Instance);
 
-        _recorder.RecordStartAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        _recorder.RecordStartAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(Guid.NewGuid());
     }
 
@@ -60,21 +60,55 @@ public class DirectJobDispatcherTests
     public async Task DispatchAsync_RecordsStartAndCompletion()
     {
         var recordId = Guid.NewGuid();
-        _recorder.RecordStartAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        _recorder.RecordStartAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(recordId);
 
         await _sut.DispatchAsync(new TestCommand("test"));
 
         await _recorder.Received(1).RecordStartAsync(
-            "TestCommand", "TestCommand", Arg.Any<string?>(), Arg.Any<CancellationToken>());
+            "TestCommand", "TestCommand", Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
         await _recorder.Received(1).RecordCompletionAsync(recordId, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DispatchAsync_PassesJobDefinitionIdToRecorder()
+    {
+        var id = Guid.NewGuid();
+
+        await _sut.DispatchAsync(new TestCommand("test"), id);
+
+        await _recorder.Received(1).RecordStartAsync(
+            "TestCommand", "TestCommand", Arg.Any<string?>(), id, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task JobExecutor_PassesJobDefinitionIdToRecorder()
+    {
+        var id = Guid.NewGuid();
+        var executor = new JobExecutor<TestCommand>(_handler, _initializer, _recorder, new NullJobProgressReporter());
+
+        await executor.RunAsync(new TestCommand("test"), id, CancellationToken.None);
+
+        await _recorder.Received(1).RecordStartAsync(
+            "TestCommand", "TestCommand", Arg.Any<string?>(), id, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task JobExecutor_LegacyTwoArgOverload_RecordsWithoutId()
+    {
+        var executor = new JobExecutor<TestCommand>(_handler, _initializer, _recorder, new NullJobProgressReporter());
+
+        await executor.RunAsync(new TestCommand("test"), CancellationToken.None);
+
+        await _recorder.Received(1).RecordStartAsync(
+            "TestCommand", "TestCommand", Arg.Any<string?>(), null, Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task DispatchAsync_OnFailure_RecordsFailureAndRethrows()
     {
         var recordId = Guid.NewGuid();
-        _recorder.RecordStartAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+        _recorder.RecordStartAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(recordId);
         _handler.ExecuteAsync(Arg.Any<TestCommand>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(new InvalidOperationException("boom")));
@@ -88,7 +122,7 @@ public class DirectJobDispatcherTests
     [Fact]
     public void Schedule_LogsWarning_DoesNotThrow()
     {
-        var act = () => _sut.Schedule(new TestCommand("test"), "*/5 * * * *");
+        var act = () => _sut.Schedule(new TestCommand("test"), "*/5 * * * *", "jobdef-x", Guid.NewGuid());
 
         act.Should().NotThrow();
     }

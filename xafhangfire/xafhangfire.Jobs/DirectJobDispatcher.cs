@@ -10,6 +10,7 @@ public sealed class DirectJobDispatcher(
 {
     public async Task DispatchAsync<TCommand>(
         TCommand command,
+        Guid? jobDefinitionId = null,
         CancellationToken cancellationToken = default)
         where TCommand : notnull
     {
@@ -30,7 +31,7 @@ public sealed class DirectJobDispatcher(
         try { parametersJson = JsonSerializer.Serialize(command, new JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull }); } catch { /* best-effort */ }
 
         var recordId = recorder != null
-            ? await recorder.RecordStartAsync(commandType, commandType, parametersJson, cancellationToken)
+            ? await recorder.RecordStartAsync(commandType, commandType, parametersJson, jobDefinitionId, cancellationToken)
             : Guid.Empty;
         reporter?.Initialize(recordId);
         try
@@ -46,7 +47,7 @@ public sealed class DirectJobDispatcher(
         }
     }
 
-    public void Schedule<TCommand>(TCommand command, string cronExpression)
+    public void Schedule<TCommand>(TCommand command, string cronExpression, string scheduleId, Guid? jobDefinitionId)
         where TCommand : notnull
     {
         logger.LogWarning(
@@ -54,4 +55,7 @@ public sealed class DirectJobDispatcher(
             typeof(TCommand).Name,
             cronExpression);
     }
+
+    // Scheduling is disabled in direct mode, so there is nothing to remove.
+    public void RemoveSchedulesExcept(IReadOnlyCollection<string> keepScheduleIds) { }
 }

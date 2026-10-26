@@ -11,6 +11,7 @@ public sealed class JobDispatchService(
     public async Task DispatchByNameAsync(
         string jobTypeName,
         string? parametersJson = null,
+        Guid? jobDefinitionId = null,
         CancellationToken cancellationToken = default)
     {
         logger.LogInformation("Dispatching job '{JobType}' with params: {Params}",
@@ -19,51 +20,27 @@ public sealed class JobDispatchService(
         switch (jobTypeName)
         {
             case nameof(DemoLogCommand):
-                var demoCmd = string.IsNullOrWhiteSpace(parametersJson)
-                    ? new DemoLogCommand("Manual run")
-                    : JsonSerializer.Deserialize<DemoLogCommand>(parametersJson)
-                      ?? new DemoLogCommand("Manual run");
-                await dispatcher.DispatchAsync(demoCmd, cancellationToken);
+                await dispatcher.DispatchAsync(Parse(parametersJson, new DemoLogCommand("Manual run")), jobDefinitionId, cancellationToken);
                 break;
 
             case nameof(ListUsersCommand):
-                var listCmd = string.IsNullOrWhiteSpace(parametersJson)
-                    ? new ListUsersCommand()
-                    : JsonSerializer.Deserialize<ListUsersCommand>(parametersJson)
-                      ?? new ListUsersCommand();
-                await dispatcher.DispatchAsync(listCmd, cancellationToken);
+                await dispatcher.DispatchAsync(Parse(parametersJson, new ListUsersCommand()), jobDefinitionId, cancellationToken);
                 break;
 
             case nameof(GenerateReportCommand):
-                var reportCmd = string.IsNullOrWhiteSpace(parametersJson)
-                    ? new GenerateReportCommand("Project Status Report")
-                    : JsonSerializer.Deserialize<GenerateReportCommand>(parametersJson)
-                      ?? new GenerateReportCommand("Project Status Report");
-                await dispatcher.DispatchAsync(reportCmd, cancellationToken);
+                await dispatcher.DispatchAsync(Parse(parametersJson, new GenerateReportCommand("Project Status Report")), jobDefinitionId, cancellationToken);
                 break;
 
             case nameof(SendEmailCommand):
-                var emailCmd = string.IsNullOrWhiteSpace(parametersJson)
-                    ? new SendEmailCommand("", "Test", "Test email")
-                    : JsonSerializer.Deserialize<SendEmailCommand>(parametersJson)
-                      ?? new SendEmailCommand("", "Test", "Test email");
-                await dispatcher.DispatchAsync(emailCmd, cancellationToken);
+                await dispatcher.DispatchAsync(Parse(parametersJson, new SendEmailCommand("", "Test", "Test email")), jobDefinitionId, cancellationToken);
                 break;
 
             case nameof(SendReportEmailCommand):
-                var reportEmailCmd = string.IsNullOrWhiteSpace(parametersJson)
-                    ? new SendReportEmailCommand("Project Status Report", "admin@example.com")
-                    : JsonSerializer.Deserialize<SendReportEmailCommand>(parametersJson)
-                      ?? new SendReportEmailCommand("Project Status Report", "admin@example.com");
-                await dispatcher.DispatchAsync(reportEmailCmd, cancellationToken);
+                await dispatcher.DispatchAsync(Parse(parametersJson, new SendReportEmailCommand("Project Status Report", "admin@example.com")), jobDefinitionId, cancellationToken);
                 break;
 
             case nameof(SendMailMergeCommand):
-                var mergeCmd = string.IsNullOrWhiteSpace(parametersJson)
-                    ? new SendMailMergeCommand("Welcome Contact")
-                    : JsonSerializer.Deserialize<SendMailMergeCommand>(parametersJson)
-                      ?? new SendMailMergeCommand("Welcome Contact");
-                await dispatcher.DispatchAsync(mergeCmd, cancellationToken);
+                await dispatcher.DispatchAsync(Parse(parametersJson, new SendMailMergeCommand("Welcome Contact")), jobDefinitionId, cancellationToken);
                 break;
 
             default:
@@ -74,64 +51,47 @@ public sealed class JobDispatchService(
     public void ScheduleByName(
         string jobTypeName,
         string? parametersJson,
-        string cronExpression)
+        string cronExpression,
+        string scheduleId,
+        Guid? jobDefinitionId)
     {
-        logger.LogInformation("Scheduling job '{JobType}' with cron '{Cron}'",
-            jobTypeName, cronExpression);
+        logger.LogInformation("Scheduling job '{JobType}' as '{ScheduleId}' with cron '{Cron}'",
+            jobTypeName, scheduleId, cronExpression);
 
         switch (jobTypeName)
         {
             case nameof(DemoLogCommand):
-                var demoCmd = string.IsNullOrWhiteSpace(parametersJson)
-                    ? new DemoLogCommand("Scheduled run")
-                    : JsonSerializer.Deserialize<DemoLogCommand>(parametersJson)
-                      ?? new DemoLogCommand("Scheduled run");
-                dispatcher.Schedule(demoCmd, cronExpression);
+                dispatcher.Schedule(Parse(parametersJson, new DemoLogCommand("Scheduled run")), cronExpression, scheduleId, jobDefinitionId);
                 break;
 
             case nameof(ListUsersCommand):
-                var listCmd = string.IsNullOrWhiteSpace(parametersJson)
-                    ? new ListUsersCommand()
-                    : JsonSerializer.Deserialize<ListUsersCommand>(parametersJson)
-                      ?? new ListUsersCommand();
-                dispatcher.Schedule(listCmd, cronExpression);
+                dispatcher.Schedule(Parse(parametersJson, new ListUsersCommand()), cronExpression, scheduleId, jobDefinitionId);
                 break;
 
             case nameof(GenerateReportCommand):
-                var reportScheduleCmd = string.IsNullOrWhiteSpace(parametersJson)
-                    ? new GenerateReportCommand("Project Status Report")
-                    : JsonSerializer.Deserialize<GenerateReportCommand>(parametersJson)
-                      ?? new GenerateReportCommand("Project Status Report");
-                dispatcher.Schedule(reportScheduleCmd, cronExpression);
+                dispatcher.Schedule(Parse(parametersJson, new GenerateReportCommand("Project Status Report")), cronExpression, scheduleId, jobDefinitionId);
                 break;
 
             case nameof(SendEmailCommand):
-                var emailScheduleCmd = string.IsNullOrWhiteSpace(parametersJson)
-                    ? new SendEmailCommand("", "Test", "Test email")
-                    : JsonSerializer.Deserialize<SendEmailCommand>(parametersJson)
-                      ?? new SendEmailCommand("", "Test", "Test email");
-                dispatcher.Schedule(emailScheduleCmd, cronExpression);
+                dispatcher.Schedule(Parse(parametersJson, new SendEmailCommand("", "Test", "Test email")), cronExpression, scheduleId, jobDefinitionId);
                 break;
 
             case nameof(SendReportEmailCommand):
-                var reportEmailScheduleCmd = string.IsNullOrWhiteSpace(parametersJson)
-                    ? new SendReportEmailCommand("Project Status Report", "admin@example.com")
-                    : JsonSerializer.Deserialize<SendReportEmailCommand>(parametersJson)
-                      ?? new SendReportEmailCommand("Project Status Report", "admin@example.com");
-                dispatcher.Schedule(reportEmailScheduleCmd, cronExpression);
+                dispatcher.Schedule(Parse(parametersJson, new SendReportEmailCommand("Project Status Report", "admin@example.com")), cronExpression, scheduleId, jobDefinitionId);
                 break;
 
             case nameof(SendMailMergeCommand):
-                var mergeScheduleCmd = string.IsNullOrWhiteSpace(parametersJson)
-                    ? new SendMailMergeCommand("Welcome Contact")
-                    : JsonSerializer.Deserialize<SendMailMergeCommand>(parametersJson)
-                      ?? new SendMailMergeCommand("Welcome Contact");
-                dispatcher.Schedule(mergeScheduleCmd, cronExpression);
+                dispatcher.Schedule(Parse(parametersJson, new SendMailMergeCommand("Welcome Contact")), cronExpression, scheduleId, jobDefinitionId);
                 break;
 
             default:
-                logger.LogWarning("Cannot schedule unknown job type: '{JobType}'", jobTypeName);
-                break;
+                // Thrown so the synchronizer does not keep (or create) a schedule for it.
+                throw new InvalidOperationException($"Cannot schedule unknown job type: '{jobTypeName}'");
         }
     }
+
+    private static T Parse<T>(string? parametersJson, T fallback) =>
+        string.IsNullOrWhiteSpace(parametersJson)
+            ? fallback
+            : JsonSerializer.Deserialize<T>(parametersJson) ?? fallback;
 }

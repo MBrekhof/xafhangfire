@@ -2,6 +2,7 @@ using DevExpress.ExpressApp;
 using DevExpress.ExpressApp.Actions;
 using Microsoft.Extensions.DependencyInjection;
 using xafhangfire.Jobs;
+using xafhangfire.Module.BusinessObjects;
 
 namespace xafhangfire.Module.Controllers;
 
@@ -11,7 +12,7 @@ public sealed class JobSchedulerViewController : ViewController
 
     public JobSchedulerViewController()
     {
-        TargetObjectType = typeof(BusinessObjects.JobDefinition);
+        TargetObjectType = typeof(JobDefinition);
 
         _runNowAction = new SimpleAction(this, "RunJobNow", "Edit")
         {
@@ -22,29 +23,59 @@ public sealed class JobSchedulerViewController : ViewController
         _runNowAction.Execute += RunNowAction_Execute;
     }
 
-    private async void RunNowAction_Execute(object sender, SimpleActionExecuteEventArgs e)
+    private void RunNowAction_Execute(object sender, SimpleActionExecuteEventArgs e)
     {
-        var job = (BusinessObjects.JobDefinition)e.CurrentObject;
+        var job = (JobDefinition)e.CurrentObject;
 
+        // Save pending edits first, synchronously, so XAF's validation UI handles a failed save
+        // and the recorder (separate ObjectSpace) can find a newly created definition.
+        if (ObjectSpace.IsModified)
+            ObjectSpace.CommitChanges();
+
+        RunNow(job.Id, job.Name, job.JobTypeName, job.ParametersJson, job.LastRunUtc);
+    }
+
+    // async void is the XAF Blazor action pattern; nothing may escape it.
+    private async void RunNow(Guid jobId, string jobName, string jobTypeName, string parametersJson, DateTime? previousLastRunUtc)
+    {
         try
         {
             var dispatchService = Application.ServiceProvider.GetRequiredService<JobDispatchService>();
-            await dispatchService.DispatchByNameAsync(job.JobTypeName, job.ParametersJson);
+            await dispatchService.DispatchByNameAsync(jobTypeName, parametersJson, jobId);
 
-            job.LastRunUtc = DateTime.UtcNow;
-            job.LastRunStatus = BusinessObjects.JobRunStatus.Running;
-            ObjectSpace.CommitChanges();
-
-            Application.ShowViewStrategy.ShowMessage($"Job '{job.Name}' dispatched successfully.");
+            if (IsViewGone()) return;
+            // The recorder owns LastRun*; just show what it wrote.
+            ObjectSpace.Refresh();
+            Application.ShowViewStrategy.ShowMessage($"Job '{jobName}' dispatched successfully.");
         }
         catch (Exception ex)
         {
-            job.LastRunUtc = DateTime.UtcNow;
-            job.LastRunStatus = BusinessObjects.JobRunStatus.Failed;
-            job.LastRunMessage = ex.Message;
-            ObjectSpace.CommitChanges();
+            try
+            {
+                if (IsViewGone()) return;
+                ObjectSpace.Refresh();
 
-            Application.ShowViewStrategy.ShowMessage($"Job '{job.Name}' failed: {ex.Message}");
+                // Unchanged LastRunUtc = the recorder never saw this run (e.g. invalid parameters
+                // rejected at dispatch), so record the failure here.
+                var refreshed = ObjectSpace.FirstOrDefault<JobDefinition>(j => j.Id == jobId);
+                if (refreshed != null && refreshed.LastRunUtc == previousLastRunUtc)
+                {
+                    refreshed.LastRunUtc = DateTime.UtcNow;
+                    refreshed.LastRunStatus = JobRunStatus.Failed;
+                    refreshed.LastRunMessage = ex.Message;
+                    ObjectSpace.CommitChanges();
+                }
+
+                Application.ShowViewStrategy.ShowMessage($"Job '{jobName}' failed: {ex.Message}");
+            }
+            catch
+            {
+                // View closed or save conflict while reporting the failure; the job outcome is
+                // in the execution history either way.
+            }
         }
     }
+
+    private bool IsViewGone() =>
+        !Active.ResultValue || View == null || View.IsDisposed || ObjectSpace == null || ObjectSpace.IsDisposed;
 }

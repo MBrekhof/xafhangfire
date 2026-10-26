@@ -14,7 +14,7 @@ public sealed class XafJobExecutionRecorder(
 {
     private int FailureAlertThreshold => configuration.GetValue("Jobs:FailureAlertThreshold", 3);
 
-    public Task<Guid> RecordStartAsync(string jobName, string jobTypeName, string? parametersJson, CancellationToken cancellationToken = default)
+    public Task<Guid> RecordStartAsync(string jobName, string jobTypeName, string? parametersJson, Guid? jobDefinitionId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -27,10 +27,20 @@ public sealed class XafJobExecutionRecorder(
             record.Status = JobRunStatus.Running;
             record.ParametersJson = parametersJson ?? string.Empty;
 
-            // Link to JobDefinition if one exists with this name
-            var jobDef = objectSpace.FirstOrDefault<JobDefinition>(j => j.Name == jobName);
+            // Link by id when the caller knows its definition. The name lookup is only for ad-hoc
+            // dispatches: a deleted definition must not fall back to an unrelated namesake.
+            var jobDef = jobDefinitionId is { } id
+                ? objectSpace.FirstOrDefault<JobDefinition>(j => j.Id == id)
+                : objectSpace.FirstOrDefault<JobDefinition>(j => j.Name == jobName);
             if (jobDef != null)
+            {
                 record.JobDefinition = jobDef;
+                record.JobName = jobDef.Name;
+                // The recorder owns all LastRun* writes (RunNow no longer stamps them).
+                jobDef.LastRunUtc = record.StartedUtc;
+                jobDef.LastRunStatus = JobRunStatus.Running;
+                jobDef.LastRunMessage = string.Empty; // a previous failure's message doesn't describe this run
+            }
 
             objectSpace.CommitChanges();
 

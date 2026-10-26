@@ -270,6 +270,7 @@ namespace xafhangfire.Blazor.Server
             services.AddJobHandler<SendMailMergeCommand, SendMailMergeHandler>();
             services.AddJobHandler<SendReportEmailCommand, xafhangfire.Blazor.Server.Handlers.SendReportEmailHandler>();
             services.AddTransient<JobDispatchService>();
+            services.AddSingleton<IJobScheduleSynchronizer, xafhangfire.Blazor.Server.Services.JobScheduleSynchronizer>();
             services.AddHostedService<JobSyncService>();
         }
 

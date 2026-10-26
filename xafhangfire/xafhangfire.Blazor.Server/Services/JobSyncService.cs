@@ -1,15 +1,12 @@
-using DevExpress.ExpressApp;
-using DevExpress.ExpressApp.Core;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using xafhangfire.Jobs;
-using xafhangfire.Module.BusinessObjects;
 
 namespace xafhangfire.Blazor.Server.Services;
 
+/// <summary>Runs the schedule sync once at startup.</summary>
 public sealed class JobSyncService(
-    IServiceProvider serviceProvider,
+    IJobScheduleSynchronizer synchronizer,
     ILogger<JobSyncService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -20,39 +17,11 @@ public sealed class JobSyncService(
 
         try
         {
-            SyncRecurringJobs();
+            synchronizer.Sync();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to sync JobDefinitions to Hangfire recurring jobs");
-        }
-    }
-
-    private void SyncRecurringJobs()
-    {
-        using var scope = serviceProvider.CreateScope();
-        var objectSpaceFactory = scope.ServiceProvider.GetRequiredService<INonSecuredObjectSpaceFactory>();
-        var dispatchService = scope.ServiceProvider.GetRequiredService<JobDispatchService>();
-
-        using var objectSpace = objectSpaceFactory.CreateNonSecuredObjectSpace<JobDefinition>();
-        var enabledJobs = objectSpace.GetObjects<JobDefinition>()
-            .Where(j => j.IsEnabled && !string.IsNullOrWhiteSpace(j.CronExpression))
-            .ToList();
-
-        logger.LogInformation("JobSyncService: found {Count} enabled jobs with cron schedules", enabledJobs.Count);
-
-        foreach (var job in enabledJobs)
-        {
-            try
-            {
-                dispatchService.ScheduleByName(job.JobTypeName, job.ParametersJson, job.CronExpression);
-                logger.LogInformation("JobSyncService: registered recurring job '{Name}' ({Type}) with cron '{Cron}'",
-                    job.Name, job.JobTypeName, job.CronExpression);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "JobSyncService: failed to register recurring job '{Name}'", job.Name);
-            }
+            logger.LogError(ex, "Failed to sync JobDefinitions to recurring jobs");
         }
     }
 }

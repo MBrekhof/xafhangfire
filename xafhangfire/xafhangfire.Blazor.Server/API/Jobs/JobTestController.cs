@@ -18,7 +18,7 @@ public sealed class JobTestController(IJobDispatcher dispatcher) : ControllerBas
     {
         await dispatcher.DispatchAsync(
             new DemoLogCommand(message, delaySeconds),
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         return Ok(new { dispatched = "DemoLogCommand", message, delaySeconds });
     }
@@ -30,7 +30,7 @@ public sealed class JobTestController(IJobDispatcher dispatcher) : ControllerBas
     {
         await dispatcher.DispatchAsync(
             new ListUsersCommand(maxResults),
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         return Ok(new { dispatched = "ListUsersCommand", maxResults });
     }

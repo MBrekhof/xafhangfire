@@ -9,8 +9,14 @@ public sealed class JobExecutor<TCommand>(
     IJobExecutionRecorder executionRecorder,
     IJobProgressReporter progressReporter)
 {
+    // Kept for Hangfire jobs serialized before jobDefinitionId existed (recurring jobs can fire
+    // before the startup sync re-registers them with the new signature).
     [AutomaticRetry(Attempts = 3)]
-    public async Task RunAsync(TCommand command, CancellationToken cancellationToken)
+    public Task RunAsync(TCommand command, CancellationToken cancellationToken)
+        => RunAsync(command, null, cancellationToken);
+
+    [AutomaticRetry(Attempts = 3)]
+    public async Task RunAsync(TCommand command, Guid? jobDefinitionId, CancellationToken cancellationToken)
     {
         await scopeInitializer.InitializeAsync(cancellationToken);
 
@@ -18,7 +24,7 @@ public sealed class JobExecutor<TCommand>(
         string? parametersJson = null;
         try { parametersJson = JsonSerializer.Serialize(command, new JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull }); } catch { /* best-effort */ }
 
-        var recordId = await executionRecorder.RecordStartAsync(commandType, commandType, parametersJson, cancellationToken);
+        var recordId = await executionRecorder.RecordStartAsync(commandType, commandType, parametersJson, jobDefinitionId, cancellationToken);
         progressReporter.Initialize(recordId);
         try
         {
