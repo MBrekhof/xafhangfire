@@ -1,16 +1,22 @@
 @using DevExpress.Blazor
+@using xafhangfire.Jobs
 
 <style>
+    /* Theme colours via public DevExpress Fluent variables; fallbacks = the old light look
+       (Classic themes define no --dxds-* variables). Hardcoded #fff was unreadable in dark mode (UI-004). */
     .kv-input {
-        border: 1px solid #d2d2d2;
+        border: 1px solid var(--dxds-color-border-neutral-default-rest, #d2d2d2);
         border-radius: 2px;
         padding: 5px 10px;
         font-size: inherit;
         line-height: 1.5;
-        color: inherit;
-        background-color: #fff;
+        color: var(--dxds-color-content-neutral-default-rest, #161616);
+        background-color: var(--dxds-color-surface-neutral-default-rest, #fff);
         transition: border-color 0.15s ease-in-out;
         width: 100%;
+    }
+    .kv-input:disabled {
+        opacity: 0.5;
     }
     .kv-input:focus {
         outline: none;
@@ -52,9 +58,24 @@ else
                                 CheckedChanged="@((bool v) => OnBoolChanged(field, v))" />
                     break;
                 case "date":
-                    <input type="date" class="kv-input"
-                           value="@(field.DateTimeValue?.ToString("yyyy-MM-dd"))"
-                           @onchange="@(e => OnDateInputChanged(field, e.Value?.ToString()))" />
+                    <div class="d-flex gap-2">
+                        <select class="kv-input" style="max-width: 45%"
+                                @onchange="@(e => OnRelativeTermChanged(field, e.Value?.ToString()))">
+                            <option value="" selected="@(field.RelativeTerm == null)">Specific date</option>
+                            @foreach (var term in DateRangeResolver.Terms)
+                            {
+                                <option value="@term" selected="@(field.RelativeTerm == term)">@term</option>
+                            }
+                        </select>
+                        <input type="date" class="kv-input"
+                               disabled="@(field.RelativeTerm != null)"
+                               value="@(field.DateTimeValue?.ToString("yyyy-MM-dd"))"
+                               @onchange="@(e => OnDateInputChanged(field, e.Value?.ToString()))" />
+                    </div>
+                    @if (field.RelativeTerm == null && field.DateTimeValue == null && !string.IsNullOrEmpty(field.StringValue))
+                    {
+                        <small class="text-danger">Unrecognised value '@field.StringValue' (kept as is)</small>
+                    }
                     break;
                 case "decimal":
                     <DxSpinEdit Value="@field.DecimalValue"
@@ -113,9 +134,10 @@ else
                             Rows="3" CssClass="w-100" />
                     break;
                 default:
-                    <DxTextBox Value="@field.StringValue"
-                               ValueChanged="@((string v) => OnStringChanged(field, v))"
-                               CssClass="w-100" />
+                    @* Plain input: DxTextBox does not render its Value when created dynamically in this editor (UI-003). *@
+                    <input type="text" class="kv-input"
+                           value="@field.StringValue"
+                           @onchange="@(e => OnStringChanged(field, e.Value?.ToString() ?? string.Empty))" />
                     break;
             }
         </div>
@@ -158,9 +180,21 @@ else
         await NotifyJsonChanged();
     }
 
+    // Picking a date or a term replaces whatever was there, including an unrecognised raw value.
     private async Task OnDateInputChanged(ParameterFieldModel field, string value)
     {
         field.DateTimeValue = DateTime.TryParse(value, out var dt) ? dt : null;
+        field.RelativeTerm = null;
+        field.StringValue = string.Empty;
+        await NotifyJsonChanged();
+    }
+
+    private async Task OnRelativeTermChanged(ParameterFieldModel field, string term)
+    {
+        field.RelativeTerm = string.IsNullOrEmpty(term) ? null : term;
+        if (field.RelativeTerm != null)
+            field.DateTimeValue = null;
+        field.StringValue = string.Empty;
         await NotifyJsonChanged();
     }
 

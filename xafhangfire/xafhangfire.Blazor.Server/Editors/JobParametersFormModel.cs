@@ -45,6 +45,8 @@ public class ParameterFieldModel
     public List<string> DropdownItems { get; set; } = new();
     public List<LookupItem> LookupItems { get; set; } = new();
     public DateTime? DateTimeValue { get; set; }
+    /// <summary>DateRangeResolver term ("last-month") for a date field; null = a specific date.</summary>
+    public string RelativeTerm { get; set; }
     public decimal DecimalValue { get; set; }
     public string GroupName { get; set; }
 }

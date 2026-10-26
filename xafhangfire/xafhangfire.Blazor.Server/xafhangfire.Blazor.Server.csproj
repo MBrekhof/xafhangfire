@@ -12,6 +12,9 @@
     <None Remove="Model.xafml" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="xafhangfire.Jobs.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="Model.xafml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

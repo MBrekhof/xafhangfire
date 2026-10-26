@@ -4,6 +4,16 @@ public readonly record struct DateRange(DateOnly Start, DateOnly End);
 
 public static class DateRangeResolver
 {
+    /// <summary>Every term <see cref="Resolve"/> accepts (offered in the parameter editor).</summary>
+    public static IReadOnlyList<string> Terms { get; } =
+    [
+        "today", "yesterday",
+        "this-week", "last-week", "next-week",
+        "this-month", "last-month", "next-month",
+        "this-quarter", "last-quarter",
+        "this-year", "last-year",
+    ];
+
     public static DateRange Resolve(string term, DateOnly? relativeTo = null)
     {
         var today = relativeTo ?? DateOnly.FromDateTime(DateTime.Today);

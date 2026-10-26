@@ -25,7 +25,8 @@ namespace xafhangfire.Module.Reports
             // (ReportParametersObjectBase) — no Parameter objects needed on the report.
             // The FilterString references ?-prefixed names that ReportParameterHelper
             // auto-creates at runtime when executing via the job dispatcher.
-            FilterString = "[StartDate] >= ?StartDate And [StartDate] <= ?EndDate";
+            // A missing bound (undefined/null parameter) leaves that side open.
+            FilterString = "(?StartDate Is Null Or [StartDate] >= ?StartDate) And (?EndDate Is Null Or [StartDate] <= ?EndDate)";
             RequestParameters = false;
 
             var reportHeader = new ReportHeaderBand { HeightF = 60 };

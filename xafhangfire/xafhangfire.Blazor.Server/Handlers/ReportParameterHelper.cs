@@ -1,4 +1,5 @@
 #nullable enable
+using System.Globalization;
 using DevExpress.XtraReports.Parameters;
 using DevExpress.XtraReports.UI;
 using Microsoft.Extensions.Logging;
@@ -23,6 +24,21 @@ internal static class ReportParameterHelper
             var param = report.Parameters[key]
                 ?? report.Parameters.Cast<Parameter>()
                     .FirstOrDefault(p => string.Equals(p.Description, key, StringComparison.OrdinalIgnoreCase));
+
+            // Empty = not set. An undefined ?param in FilterString evaluates to null, which the
+            // reports' "?p Is Null Or …" filters treat as "no filter". Never create a parameter
+            // for it: without AllowNull, DevExpress coerces null to ""/Guid.Empty and filters
+            // every row out (SER-003).
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                if (param is not null)
+                {
+                    param.AllowNull = true;
+                    param.Value = null;
+                    logger.LogDebug("Report parameter '{Name}' cleared (empty value)", key);
+                }
+                continue;
+            }
 
             // Auto-create the parameter if it doesn't exist on the report.
             // This supports the ReportParametersObjectBase-only pattern where
@@ -86,7 +102,7 @@ internal static class ReportParameterHelper
             return typeof(DateTime);
         if (int.TryParse(value, out _))
             return typeof(int);
-        if (decimal.TryParse(value, out _))
+        if (decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out _))
             return typeof(decimal);
         if (bool.TryParse(value, out _))
             return typeof(bool);
@@ -132,7 +148,8 @@ internal static class ReportParameterHelper
         if (targetType == typeof(int) && int.TryParse(value, out var intVal))
             return intVal;
 
-        if (targetType == typeof(decimal) && decimal.TryParse(value, out var decVal))
+        // Stored JSON values are culture-invariant ("12.50"), whatever the server culture is.
+        if (targetType == typeof(decimal) && decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var decVal))
             return decVal;
 
         if (targetType == typeof(bool) && bool.TryParse(value, out var boolVal))

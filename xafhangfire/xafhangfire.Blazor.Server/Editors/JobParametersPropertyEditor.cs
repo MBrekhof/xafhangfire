@@ -41,17 +41,19 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
         var model = new JobParametersFormModel();
         model.RawJsonChanged = EventCallback.Factory.Create<string>(this, json =>
         {
-            var previousReportName = ExtractFieldValue(model.RawJson, "ReportName");
+            // ReportName changed (or cleared) in the typed form: drop the old report's values,
+            // then rediscover the new report's parameters. The raw editor keeps what was typed.
+            var reportChanged = !model.ShowRawEditor
+                && ExtractFieldValue(model.RawJson, "ReportName") != ExtractFieldValue(json, "ReportName");
+            if (reportChanged)
+                json = JobParametersJsonSerializer.WithoutReportParameters(json);
+
             model.RawJson = json;
             OnControlValueChanged();
             WriteValue();
 
-            // If ReportName changed, refresh fields to auto-discover report parameters
-            var newReportName = ExtractFieldValue(json, "ReportName");
-            if (previousReportName != newReportName && !string.IsNullOrEmpty(newReportName))
-            {
-                RefreshFields(json);
-            }
+            if (reportChanged)
+                RefreshFields(json, persist: true);
         });
         return model;
     }
@@ -68,7 +70,8 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
         base.ReadValueCore();
         var json = (string)PropertyValue ?? string.Empty;
         ComponentModel.RawJson = json;
-        RefreshFields(json);
+        // Opening a record must never rewrite it (SER-000).
+        RefreshFields(json, persist: false);
     }
 
     protected override object GetControlValueCore() => ComponentModel.RawJson;
@@ -96,11 +99,11 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
         if (e.PropertyName == nameof(JobDefinition.JobTypeName))
         {
             var json = ComponentModel.RawJson;
-            RefreshFields(json);
+            RefreshFields(json, persist: true);
         }
     }
 
-    private void RefreshFields(string json)
+    private void RefreshFields(string json, bool persist)
     {
         var jobTypeName = GetJobTypeName();
         var metadata = jobTypeName != null
@@ -115,163 +118,16 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
         }
 
         ComponentModel.ShowRawEditor = false;
-        var values = ParseJson(json);
-        var fields = new List<ParameterFieldModel>();
-
-        foreach (var param in metadata)
-        {
-            // Handle ReportParameters: emit individual typed fields instead of keyvalue
-            if (param.DataSourceHint == "ReportParameters")
-            {
-                var reportName = ExtractReportNameFromValues(values);
-                if (!string.IsNullOrEmpty(reportName))
-                {
-                    var discovered = DiscoverReportParameters(reportName);
-                    if (discovered.Count > 0)
-                    {
-                        var existingValues = new Dictionary<string, string>();
-                        if (values.TryGetValue(param.Name, out var existingElement)
-                            && existingElement.ValueKind == JsonValueKind.Object)
-                        {
-                            foreach (var prop in existingElement.EnumerateObject())
-                            {
-                                existingValues[prop.Name] = prop.Value.ValueKind == JsonValueKind.String
-                                    ? prop.Value.GetString() ?? string.Empty
-                                    : prop.Value.GetRawText();
-                            }
-                        }
-
-                        foreach (var d in discovered)
-                        {
-                            var typedField = new ParameterFieldModel
-                            {
-                                Name = d.Name,
-                                DisplayName = d.DisplayName,
-                                GroupName = param.Name,
-                            };
-
-                            if (d.ClrType == typeof(DateTime) || d.ClrType == typeof(DateOnly))
-                                typedField.FieldType = "date";
-                            else if (d.ClrType == typeof(int))
-                                typedField.FieldType = "int";
-                            else if (d.ClrType == typeof(decimal) || d.ClrType == typeof(double) || d.ClrType == typeof(float))
-                                typedField.FieldType = "decimal";
-                            else if (d.ClrType == typeof(bool))
-                                typedField.FieldType = "bool";
-                            else if (IsEntityType(d.ClrType))
-                            {
-                                typedField.FieldType = "lookup";
-                                typedField.LookupItems = LoadLookupItems(d.ClrType);
-                            }
-                            else
-                                typedField.FieldType = "string";
-
-                            var valueStr = existingValues.TryGetValue(d.Name, out var v) ? v : d.DefaultValue;
-                            switch (typedField.FieldType)
-                            {
-                                case "date":
-                                    typedField.DateTimeValue = DateTime.TryParse(valueStr, out var dt) ? dt : null;
-                                    break;
-                                case "int":
-                                    typedField.IntValue = int.TryParse(valueStr, out var iv) ? iv : 0;
-                                    break;
-                                case "decimal":
-                                    typedField.DecimalValue = decimal.TryParse(valueStr, out var dec) ? dec : 0;
-                                    break;
-                                case "bool":
-                                    typedField.BoolValue = bool.TryParse(valueStr, out var b) && b;
-                                    break;
-                                case "lookup":
-                                default:
-                                    typedField.StringValue = valueStr;
-                                    break;
-                            }
-
-                            fields.Add(typedField);
-                        }
-                        continue;
-                    }
-                }
-            }
-
-            var field = new ParameterFieldModel
-            {
-                Name = param.Name,
-                DisplayName = FormatDisplayName(param.Name),
-                IsRequired = param.IsRequired,
-            };
-
-            // Determine field type based on DataSourceHint first, then CLR type
-            if (param.DataSourceHint == "KeyValue" || param.DataSourceHint == "ReportParameters")
-            {
-                field.FieldType = "keyvalue";
-            }
-            else if (param.DataSourceHint != null && param.ParameterType == typeof(string))
-            {
-                field.FieldType = "dropdown";
-                field.DropdownItems = ResolveDropdownItems(param.DataSourceHint);
-            }
-            else if (param.ParameterType == typeof(int))
-                field.FieldType = "int";
-            else if (param.ParameterType == typeof(bool))
-                field.FieldType = "bool";
-            else if (param.ParameterType == typeof(string))
-                field.FieldType = "string";
-            else if (param.ParameterType.IsGenericType &&
-                     param.ParameterType.GetGenericTypeDefinition() == typeof(Dictionary<,>))
-                field.FieldType = "keyvalue";
-            else
-                field.FieldType = "json";
-
-            // Set current value from JSON
-            if (values.TryGetValue(param.Name, out var element))
-            {
-                switch (field.FieldType)
-                {
-                    case "int":
-                        field.IntValue = element.ValueKind == JsonValueKind.Number
-                            ? element.GetInt32()
-                            : param.DefaultValue is int def ? def : 0;
-                        break;
-                    case "bool":
-                        field.BoolValue = element.ValueKind is JsonValueKind.True or JsonValueKind.False
-                            && element.GetBoolean();
-                        break;
-                    case "keyvalue":
-                        field.KeyValuePairs = ParseKeyValuePairs(element);
-                        break;
-                    case "json":
-                        field.StringValue = element.GetRawText();
-                        break;
-                    default: // string, dropdown
-                        field.StringValue = element.ValueKind == JsonValueKind.String
-                            ? element.GetString() ?? string.Empty
-                            : element.GetRawText();
-                        break;
-                }
-            }
-            else if (param.DefaultValue != null)
-            {
-                switch (field.FieldType)
-                {
-                    case "int":
-                        field.IntValue = (int)param.DefaultValue;
-                        break;
-                    case "bool":
-                        field.BoolValue = (bool)param.DefaultValue;
-                        break;
-                    default:
-                        field.StringValue = param.DefaultValue.ToString() ?? string.Empty;
-                        break;
-                }
-            }
-
-            fields.Add(field);
-        }
-
+        var fields = JobParametersJsonSerializer.LoadFields(
+            json, metadata, DiscoverReportParameters, LoadLookupItems, ResolveDropdownItems);
         ComponentModel.Fields = fields;
 
-        // Re-serialize fields to JSON so discovered params are persisted
+        // Only user actions (JobTypeName / ReportName change) write back, so newly discovered
+        // parameters land in the JSON. Loading never does: any value the typed fields cannot
+        // represent would otherwise be rewritten just by opening the record (SER-000).
+        if (!persist)
+            return;
+
         var updatedJson = SerializeFieldsToJson(fields);
         if (updatedJson != ComponentModel.RawJson)
         {
@@ -310,7 +166,7 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
                         .Select(p => new DiscoveredParameterInfo
                         {
                             Name = p.Name,
-                            DisplayName = FormatDisplayName(p.Name),
+                            DisplayName = JobParametersJsonSerializer.FormatDisplayName(p.Name),
                             ClrType = p.PropertyType,
                             DefaultValue = GetDefaultValueString(p.PropertyType)
                         })
@@ -332,7 +188,7 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
                         infos.Add(new DiscoveredParameterInfo
                         {
                             Name = p.Name,
-                            DisplayName = p.Description ?? FormatDisplayName(p.Name),
+                            DisplayName = p.Description ?? JobParametersJsonSerializer.FormatDisplayName(p.Name),
                             ClrType = p.Type,
                             DefaultValue = p.Value?.ToString() ?? string.Empty
                         });
@@ -360,22 +216,11 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
 
     private static string GetDefaultValueString(Type type)
     {
-        if (type == typeof(DateTime))
-            return DateTime.Now.ToString("yyyy-MM-dd");
-        if (type == typeof(DateOnly))
-            return DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd");
         if (type == typeof(int) || type == typeof(decimal) || type == typeof(double))
             return "0";
         if (type == typeof(bool))
             return "false";
         return string.Empty;
-    }
-
-    private static bool IsEntityType(Type type)
-    {
-        return type.IsClass && type != typeof(string)
-            && type.GetProperties().Any(p =>
-                Attribute.IsDefined(p, typeof(System.ComponentModel.DataAnnotations.KeyAttribute)));
     }
 
     private static string GetDefaultPropertyName(Type type)
@@ -450,36 +295,10 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
         }
     }
 
-    private static List<KeyValuePairModel> ParseKeyValuePairs(JsonElement element)
-    {
-        var pairs = new List<KeyValuePairModel>();
-        if (element.ValueKind == JsonValueKind.Object)
-        {
-            foreach (var prop in element.EnumerateObject())
-            {
-                pairs.Add(new KeyValuePairModel
-                {
-                    Key = prop.Name,
-                    Value = prop.Value.ValueKind == JsonValueKind.String
-                        ? prop.Value.GetString() ?? string.Empty
-                        : prop.Value.GetRawText()
-                });
-            }
-        }
-        return pairs;
-    }
-
     private string GetJobTypeName()
     {
         if (CurrentObject is JobDefinition jobDef)
             return jobDef.JobTypeName;
-        return null;
-    }
-
-    private static string ExtractReportNameFromValues(Dictionary<string, JsonElement> values)
-    {
-        if (values.TryGetValue("ReportName", out var element) && element.ValueKind == JsonValueKind.String)
-            return element.GetString();
         return null;
     }
 
@@ -496,32 +315,6 @@ public class JobParametersPropertyEditor : BlazorPropertyEditorBase, IComplexVie
         return null;
     }
 
-    private static Dictionary<string, JsonElement> ParseJson(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-            return new();
-        try
-        {
-            return JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json) ?? new();
-        }
-        catch
-        {
-            return new();
-        }
-    }
-
     private static string SerializeFieldsToJson(List<ParameterFieldModel> fields)
         => JobParametersJsonSerializer.SerializeFields(fields);
-
-    private static string FormatDisplayName(string paramName)
-    {
-        var result = new System.Text.StringBuilder();
-        foreach (var c in paramName)
-        {
-            if (char.IsUpper(c) && result.Length > 0)
-                result.Append(' ');
-            result.Append(c);
-        }
-        return result.ToString();
-    }
 }
