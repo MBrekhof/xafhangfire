@@ -231,7 +231,7 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 - Module project has no `<Nullable>enable</Nullable>` — don't use `string?` there.
 - If IIS Express is running, it may lock DLLs. Kill it before rebuilding.
 - Navigation collections MUST use `ObservableCollection<T>` (not `List<T>`) due to `ChangingAndChangedNotificationsWithOriginalValues` change tracking strategy.
-- PostgreSQL requires `Npgsql.EnableLegacyTimestampBehavior = true` for XAF's `DateTime` properties (set in Startup.cs).
+- No `Npgsql.EnableLegacyTimestampBehavior` since UPG-001: a DbContext convention maps DateTime to `timestamp without time zone` and drops Kind (see CLAUDE.md, Database).
 - Connection strings use `EFCoreProvider=PostgreSql;` prefix for XAF auto-detection. Hangfire needs this prefix stripped (see `StripEFCoreProvider` in Startup.cs).
 - Background Hangfire jobs need `IJobScopeInitializer` to authenticate as "HangfireJob" user — without it, handlers using `IReportExportService` or `IObjectSpaceFactory` fail with "The user name must not be empty".
 - Don't name a class `ReportOptions` — clashes with `DevExpress.ExpressApp.ReportsV2.ReportOptions`. Use `ReportOutputOptions` instead.
@@ -239,7 +239,7 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 - Custom property editors use the `BlazorPropertyEditorBase` + `ComponentModelBase` + Razor component pattern. The `ComponentModel` properties must match the Razor component's `[Parameter]` properties by name and type.
 - When adding a new command type, register it in `CommandMetadataProvider.CommandTypes` dictionary — otherwise the parameter editor falls back to raw JSON.
 - The `JobParametersPropertyEditor` subscribes to `INotifyPropertyChanged` on the current object — this works because XAF EF Core entities use `ChangingAndChangedNotificationsWithOriginalValues` change tracking.
-- DevExpress packages are pinned to 25.2.3 (not wildcard). Update all 4 csproj files together when changing versions.
+- DevExpress packages are pinned to 26.1.6 (not wildcard). Update all 4 csproj files together when changing versions.
 - Both Win and Blazor.Server need explicit `Npgsql.EntityFrameworkCore.PostgreSQL` and `Microsoft.EntityFrameworkCore.Design` references — transitive deps from Module aren't enough for XAF Model Editor design-time.
 - **Model Editor requires `Microsoft.EntityFrameworkCore.SqlServer` in Module project** — XAF's `DesignTimeDbContextCreator` defaults to SQL Server regardless of `EFCoreProvider=PostgreSql;` connection string. The Model Editor only loads types, never connects to a DB. Use `DesignTimeDbContextFactory<T>` (XAF's base class), not `IDesignTimeDbContextFactory<T>`.
 - XtraReport `Parameter.Name` may be empty for some reports — `DiscoverReportParameters` falls back to `Description`. Debug with breakpoints if keys still empty.
@@ -266,7 +266,7 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 - Entity type detection in parameter editor uses `[Key]` attribute; display text uses `[DefaultProperty]` attribute.
 - DxTextBox and DxDateEdit components do NOT work when created dynamically in the XAF Blazor adapter render cycle — use plain HTML `<input>` elements instead.
 - The `SerializeFieldsToJson()` call at the end of `RefreshFields` is critical — without it, discovered params are set on model fields but never written to JSON.
-- DevExpress packages pinned to 25.2.3 — update all 4 csproj files together.
+- DevExpress packages pinned to 26.1.6 — update all 4 csproj files together.
 - Module project needs `Microsoft.EntityFrameworkCore.SqlServer` for Model Editor (design-time only).
 
 **Suggested next steps (see Future section above):**

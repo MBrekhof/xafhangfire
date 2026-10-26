@@ -38,6 +38,7 @@ namespace xafhangfire.Blazor.Server
                 else
                 {
                     DevExpress.ExpressApp.FrameworkSettings.DefaultSettingsCompatibilityMode = DevExpress.ExpressApp.FrameworkSettingsCompatibilityMode.Latest;
+                    xafhangfire.Module.Helpers.PasswordHashing.UseMixed();
                     DevExpress.ExpressApp.Security.SecurityStrategy.AutoAssociationReferencePropertyMode = DevExpress.ExpressApp.Security.ReferenceWithoutAssociationPermissionsMode.AllMembers;
                     IHost host = CreateHostBuilder(args).Build();
                     if (ContainsArgument(args, "updateDatabase"))

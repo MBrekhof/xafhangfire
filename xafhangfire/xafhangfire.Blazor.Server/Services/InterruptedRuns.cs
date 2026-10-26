@@ -39,8 +39,8 @@ internal static class InterruptedRuns
         }
     }
 
-    // The dates are compared here, not in SQL: Npgsql's legacy timestamps make a DateTime parameter
-    // comparison unreliable (JOB-013). DateTime comparison ignores Kind; both sides are UTC ticks.
+    // The dates are compared here, in memory: the candidate rows are few (status Running) and
+    // DateTime comparison ignores Kind; both sides are UTC ticks.
     // ConsecutiveFailures is left alone: an interruption says nothing about the job (and must not
     // shift the JOB-004 alert streak).
     internal static (int Records, int Definitions) Mark(

@@ -81,7 +81,10 @@ Command/Handler + pluggable dispatcher. See `job-dispatcher-architecture.md` for
 2. Create handler in `Jobs/Handlers/` implementing `IJobHandler<MyCommand>`
 3. Register in `Blazor.Server/Startup.cs`: `services.AddJobHandler<MyCommand, MyHandler>()`
 
-### DevExpress 25.2 Gotchas
+### DevExpress 26.1 Gotchas
+
+- `FrameworkSettingsCompatibilityMode.Latest` hashes passwords with SHA512-600K only; both Program.cs files call `PasswordHashing.UseMixed()` (Module/Helpers) right after it so existing SHA1-20K hashes keep verifying.
+- `WinApplication.UseOldTemplates` no longer exists.
 
 - `SizeAttribute` was removed. Use `FieldSizeAttribute` from `DevExpress.ExpressApp.DC` with `FieldSizeAttribute.Unlimited`.
 - **Model Editor + PostgreSQL:** XAF's `DesignTimeDbContextCreator` defaults to SQL Server (`EFCoreMsSqlProviderReflectionHelper`) regardless of the `EFCoreProvider=PostgreSql;` connection string prefix. The Module project must reference `Microsoft.EntityFrameworkCore.SqlServer` as a design-time workaround — the Model Editor only loads type info and never actually connects to the database. The design-time factory uses `DesignTimeDbContextFactory<T>` (from `DevExpress.ExpressApp.EFCore.DesignTime`), not EF Core's raw `IDesignTimeDbContextFactory<T>`.
@@ -100,7 +103,7 @@ Command/Handler + pluggable dispatcher. See `job-dispatcher-architecture.md` for
 - `docker-compose.yml` at repo root — `docker compose up -d` to start
 - Single database `xafhangfire` holds both app tables and Hangfire tables
 - Connection strings use `EFCoreProvider=PostgreSql;` prefix for XAF auto-detection
-- `Npgsql.EnableLegacyTimestampBehavior = true` for XAF DateTime compatibility
+- **No `Npgsql.EnableLegacyTimestampBehavior`** (dropped in UPG-001: it broke Hangfire.PostgreSql's `fetchedat` matching). Instead `xafhangfireEFCoreDbContext.ConfigureConventions` maps every `DateTime`/`DateTime?` to `timestamp without time zone` with `UnspecifiedKindConverter` (Kind dropped on write), so Utc, Local and Unspecified values all store as written. Don't put `DateTime.UtcNow`/`Now` *inside* a LINQ predicate against these columns (translates to `now()`, a timestamptz, and throws) — capture it in a variable first. `Upg001Tests` fails if a DateTime property escapes the convention.
 
 ### EF Core Configuration
 
@@ -112,7 +115,7 @@ The DbContext uses several XAF-specific EF Core conventions:
 
 ## Tech Stack
 
-- **.NET 8.0**, **DevExpress XAF 25.2.x**, **EF Core 8.0.18**
+- **.NET 10** (`net10.0`, Win `net10.0-windows`), **DevExpress XAF 26.1.6**, **EF Core 10.0.14**, **Npgsql EF 10.0.3**
 - **PostgreSQL 16** via Docker (`localhost:5433`)
 - **Blazor Server** + **SignalR** for web UI
 - **Swagger/OpenAPI** at `/swagger` (dev only)

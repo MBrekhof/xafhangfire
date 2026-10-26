@@ -23,7 +23,6 @@ namespace xafhangfire.Win
             SplashScreen = new DXSplashScreen(typeof(XafSplashScreen), new DefaultOverlayFormOptions());
             ApplicationName = "xafhangfire";
             CheckCompatibilityType = DevExpress.ExpressApp.CheckCompatibilityType.DatabaseSchema;
-            UseOldTemplates = false;
             DatabaseVersionMismatch += xafhangfireWindowsFormsApplication_DatabaseVersionMismatch;
             CustomizeLanguagesList += xafhangfireWindowsFormsApplication_CustomizeLanguagesList;
         }

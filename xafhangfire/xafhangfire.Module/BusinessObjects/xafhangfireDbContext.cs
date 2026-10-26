@@ -46,6 +46,20 @@ namespace xafhangfire.Module.BusinessObjects
                 .WithOne(t => t.Owner)
                 .OnDelete(DeleteBehavior.Cascade);
         }
+
+        // UPG-001/JOB-013: no Npgsql legacy timestamp switch. DateTime columns stay `timestamp without time zone`
+        // and keep the wall-clock value as written (what the legacy switch did); Kind is dropped on the way in, so
+        // Utc, Local and Unspecified values and LINQ parameters are all accepted.
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+        {
+            configurationBuilder.Properties<DateTime>().HaveColumnType("timestamp without time zone").HaveConversion<UnspecifiedKindConverter>();
+            configurationBuilder.Properties<DateTime?>().HaveColumnType("timestamp without time zone").HaveConversion<UnspecifiedKindConverter>();
+        }
+    }
+
+    public class UnspecifiedKindConverter : Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTime, DateTime>
+    {
+        public UnspecifiedKindConverter() : base(v => DateTime.SpecifyKind(v, DateTimeKind.Unspecified), v => v) { }
     }
 
     // This factory creates DbContext for design-time services (Model Editor, database migrations).

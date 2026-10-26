@@ -4,8 +4,8 @@ This guide explains how to integrate the Command/Handler + Pluggable Dispatcher 
 
 ## Prerequisites
 
-- DevExpress XAF 25.2+ with EF Core
-- .NET 8.0+
+- DevExpress XAF 26.1+ with EF Core
+- .NET 10+
 - Hangfire NuGet packages
 
 ## Step 1: Create the Jobs Class Library
@@ -433,10 +433,10 @@ After discovery, `RefreshFields` calls `SerializeFieldsToJson()` to re-serialize
 | `ReportOptions` ambiguous | Don't name a class `ReportOptions` — clashes with `DevExpress.ExpressApp.ReportsV2.ReportOptions` |
 | "The user name must not be empty" in background jobs | Implement `IJobScopeInitializer` with a service user |
 | Navigation collections fail | Use `ObservableCollection<T>` (not `List<T>`) due to `ChangingAndChangedNotificationsWithOriginalValues` |
-| PostgreSQL DateTime issues | Set `Npgsql.EnableLegacyTimestampBehavior = true` in `Startup.ConfigureServices` |
+| PostgreSQL DateTime issues | Don't use `Npgsql.EnableLegacyTimestampBehavior` — it breaks Hangfire.PostgreSql's queue matching (finished jobs stay queued, requeue fails). Map `DateTime` to `timestamp without time zone` with a Kind-dropping converter in `ConfigureConventions` (see `xafhangfireEFCoreDbContext`) |
 | Connection string for Hangfire | Strip the `EFCoreProvider=PostgreSql;` prefix — Hangfire needs a raw Npgsql string |
 | DI scope issues in DirectJobDispatcher | Use `IServiceScopeFactory` to create fresh scopes, not the root `IServiceProvider` |
-| DevExpress packages version pinning | Pin to exact version (e.g., 25.2.3) across all 4 csproj files — wildcard versions cause restore issues |
+| DevExpress packages version pinning | Pin to exact version (e.g., 26.1.6) across all 4 csproj files — wildcard versions cause restore issues |
 | Model Editor + PostgreSQL | Module needs `Microsoft.EntityFrameworkCore.SqlServer` as design-time workaround. Use XAF's `DesignTimeDbContextFactory<T>` base class |
 | DxTextBox in dynamic XAF rendering | DxTextBox shows NullText placeholders when created dynamically in XAF Blazor adapter render cycles. Use plain HTML `<input>` elements instead. Other DxComponents (DxSpinEdit, DxCheckBox, DxComboBox) work fine |
 | `[Required]` attribute conflicts | Fully qualify `[System.ComponentModel.DataAnnotations.Required]` in Module — conflicts with `DevExpress.ExpressApp.Model.RequiredAttribute` |

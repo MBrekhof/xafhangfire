@@ -55,7 +55,7 @@ xafhangfire.Jobs              xafhangfire.Module             xafhangfire.Blazor.
 
 ## Tech Stack
 
-- **.NET 8.0**, **DevExpress XAF 25.2**, **EF Core 8.0**
+- **.NET 10**, **DevExpress XAF 26.1**, **EF Core 10**
 - **PostgreSQL 16** via Docker (app DB + Hangfire storage)
 - **Hangfire** with PostgreSQL storage (in-memory fallback)
 - **MailKit** for SMTP email
@@ -65,9 +65,9 @@ xafhangfire.Jobs              xafhangfire.Module             xafhangfire.Blazor.
 
 ## Prerequisites
 
-- .NET 8.0 SDK
+- .NET 10 SDK
 - Docker (for PostgreSQL)
-- DevExpress 25.2 NuGet feed configured
+- DevExpress 26.1 NuGet feed configured
 
 ## Getting Started
 
