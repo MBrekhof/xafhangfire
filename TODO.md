@@ -46,6 +46,7 @@
 - [ ] Job definition editing in WinForms is degraded (unverified) (ID: 2588)
 - [ ] Hangfire never deletes finished jobs from its queue (legacy timestamps vs fetchedat) (ID: 2589)
 - [ ] Run Now on a nested JobDefinition list would only save to the parent ObjectSpace (unverified) (ID: 2590)
+- [ ] Job handlers mishandle the job's CancellationToken (unverified) (ID: 2591)
 
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
