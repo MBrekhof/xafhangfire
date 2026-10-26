@@ -16,7 +16,8 @@ public sealed class XafJobExecutionRecorder(
     // Serializes JobDefinition status updates so two failing runs can't both alert or lose an increment.
     // ponytail: process-wide lock; one app instance runs the Hangfire server. Use an atomic SQL
     // "ConsecutiveFailures = ConsecutiveFailures + 1 RETURNING" if it ever scales out.
-    private static readonly object DefinitionStatusLock = new();
+    // Also taken by InterruptedRuns (JOB-010) at startup.
+    internal static readonly object DefinitionStatusLock = new();
 
     private int FailureAlertThreshold => configuration.GetValue("Jobs:FailureAlertThreshold", 3);
 
@@ -24,34 +25,37 @@ public sealed class XafJobExecutionRecorder(
     {
         try
         {
-            using var objectSpace = objectSpaceFactory.CreateNonSecuredObjectSpace<JobExecutionRecord>();
-
-            var record = objectSpace.CreateObject<JobExecutionRecord>();
-            record.JobName = jobName;
-            record.JobTypeName = jobTypeName;
-            record.StartedUtc = DateTime.UtcNow;
-            record.Status = JobRunStatus.Running;
-            record.ParametersJson = parametersJson ?? string.Empty;
-
-            // Link by id when the caller knows its definition. The name lookup is only for ad-hoc
-            // dispatches: a deleted definition must not fall back to an unrelated namesake.
-            var jobDef = jobDefinitionId is { } id
-                ? objectSpace.FirstOrDefault<JobDefinition>(j => j.Id == id)
-                : objectSpace.FirstOrDefault<JobDefinition>(j => j.Name == jobName);
-            if (jobDef != null)
+            lock (DefinitionStatusLock)
             {
-                record.JobDefinition = jobDef;
-                record.JobName = jobDef.Name;
-                // The recorder owns all LastRun* writes (RunNow no longer stamps them).
-                jobDef.LastRunUtc = record.StartedUtc;
-                jobDef.LastRunStatus = JobRunStatus.Running;
-                jobDef.LastRunMessage = string.Empty; // a previous failure's message doesn't describe this run
+                using var objectSpace = objectSpaceFactory.CreateNonSecuredObjectSpace<JobExecutionRecord>();
+
+                var record = objectSpace.CreateObject<JobExecutionRecord>();
+                record.JobName = jobName;
+                record.JobTypeName = jobTypeName;
+                record.StartedUtc = DateTime.UtcNow;
+                record.Status = JobRunStatus.Running;
+                record.ParametersJson = parametersJson ?? string.Empty;
+
+                // Link by id when the caller knows its definition. The name lookup is only for ad-hoc
+                // dispatches: a deleted definition must not fall back to an unrelated namesake.
+                var jobDef = jobDefinitionId is { } id
+                    ? objectSpace.FirstOrDefault<JobDefinition>(j => j.Id == id)
+                    : objectSpace.FirstOrDefault<JobDefinition>(j => j.Name == jobName);
+                if (jobDef != null)
+                {
+                    record.JobDefinition = jobDef;
+                    record.JobName = jobDef.Name;
+                    // The recorder owns all LastRun* writes (RunNow no longer stamps them).
+                    jobDef.LastRunUtc = record.StartedUtc;
+                    jobDef.LastRunStatus = JobRunStatus.Running;
+                    jobDef.LastRunMessage = string.Empty; // a previous failure's message doesn't describe this run
+                }
+
+                objectSpace.CommitChanges();
+
+                logger.LogDebug("Recorded job execution start: {RecordId} for '{JobName}'", record.Id, jobName);
+                return Task.FromResult(record.Id);
             }
-
-            objectSpace.CommitChanges();
-
-            logger.LogDebug("Recorded job execution start: {RecordId} for '{JobName}'", record.Id, jobName);
-            return Task.FromResult(record.Id);
         }
         catch (Exception ex)
         {
