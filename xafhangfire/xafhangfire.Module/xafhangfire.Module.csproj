@@ -16,6 +16,9 @@
     <EmbeddedResource Include="Model.DesignedDiffs.xafml" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="xafhangfire.Jobs.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="CronExpressionDescriptor" Version="2.44.0" />
     <PackageReference Include="Cronos" Version="0.11.1" />
     <PackageReference Include="DevExpress.ExpressApp" Version="25.2.3" />

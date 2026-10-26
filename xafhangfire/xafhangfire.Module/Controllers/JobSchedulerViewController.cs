@@ -8,6 +8,7 @@ namespace xafhangfire.Module.Controllers;
 
 public sealed class JobSchedulerViewController : ViewController
 {
+    private const string HasDispatcherKey = "HasDispatcher";
     private readonly SimpleAction _runNowAction;
 
     public JobSchedulerViewController()
@@ -21,6 +22,23 @@ public sealed class JobSchedulerViewController : ViewController
             SelectionDependencyType = SelectionDependencyType.RequireSingleObject
         };
         _runNowAction.Execute += RunNowAction_Execute;
+    }
+
+    protected override void OnActivated()
+    {
+        base.OnActivated();
+        // UI-006: only the Blazor host registers JobDispatchService; in WinForms Run Now can't work.
+        _runNowAction.Active[HasDispatcherKey] = HasJobDispatcher(Application?.ServiceProvider);
+    }
+
+    // IsService checks the registration without constructing the service (or its dependencies).
+    internal static bool HasJobDispatcher(IServiceProvider services) =>
+        services?.GetService<IServiceProviderIsService>()?.IsService(typeof(JobDispatchService)) == true;
+
+    protected override void OnDeactivated()
+    {
+        _runNowAction.Active.RemoveItem(HasDispatcherKey);
+        base.OnDeactivated();
     }
 
     private void RunNowAction_Execute(object sender, SimpleActionExecuteEventArgs e)
