@@ -153,6 +153,52 @@ public sealed class XafJobExecutionRecorder(
             await AlertOnRepeatedFailuresAsync(a.JobName, a.Failures, errorMessage);
     }
 
+    internal const string CancelledMessage = "Cancelled: the app stopped or the job was cancelled while it was running.";
+
+    public Task RecordInterruptedAsync(Guid recordId, CancellationToken cancellationToken = default)
+    {
+        if (recordId == Guid.Empty) return Task.CompletedTask;
+
+        try
+        {
+            lock (DefinitionStatusLock)
+            {
+                using var objectSpace = objectSpaceFactory.CreateNonSecuredObjectSpace<JobExecutionRecord>();
+
+                var record = objectSpace.FirstOrDefault<JobExecutionRecord>(r => r.Id == recordId);
+                if (record != null)
+                {
+                    MarkCancelled(record, DateTime.UtcNow);
+                    objectSpace.CommitChanges();
+                    logger.LogDebug("Recorded job interruption: {RecordId} ({DurationMs}ms)", recordId, record.DurationMs);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to record job interruption for {RecordId}", recordId);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    // Like a failure, minus ConsecutiveFailures and the alert: a cancellation says nothing about the job
+    // (and counting it would shift the JOB-004 "exactly at the threshold" alert).
+    internal static void MarkCancelled(JobExecutionRecord record, DateTime completedUtc)
+    {
+        record.CompletedUtc = completedUtc;
+        record.Status = JobRunStatus.Failed;
+        record.DurationMs = (long)(completedUtc - record.StartedUtc).TotalMilliseconds;
+        record.ErrorMessage = CancelledMessage;
+
+        if (record.JobDefinition is { } definition)
+        {
+            definition.LastRunUtc = completedUtc;
+            definition.LastRunStatus = JobRunStatus.Failed;
+            definition.LastRunMessage = CancelledMessage;
+        }
+    }
+
     /// <summary>
     /// Warns from the threshold on, and emails Jobs:FailureAlertRecipients once per failure streak
     /// (when the count reaches the threshold exactly). Never throws: the caller is reporting a job's

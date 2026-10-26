@@ -40,9 +40,15 @@ public sealed class DirectJobDispatcher(
             await handler.ExecuteAsync(command, cancellationToken);
             if (recorder != null) await recorder.RecordCompletionAsync(recordId, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Cancelled through the caller's token: not a failure (JOB-011).
+            if (recorder != null) await recorder.RecordInterruptedAsync(recordId, CancellationToken.None);
+            throw;
+        }
         catch (Exception ex)
         {
-            if (recorder != null) await recorder.RecordFailureAsync(recordId, ex.ToString(), cancellationToken);
+            if (recorder != null) await recorder.RecordFailureAsync(recordId, ex.ToString(), CancellationToken.None);
             throw;
         }
     }

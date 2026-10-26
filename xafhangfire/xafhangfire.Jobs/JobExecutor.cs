@@ -31,9 +31,17 @@ public sealed class JobExecutor<TCommand>(
             await handler.ExecuteAsync(command, cancellationToken);
             await executionRecorder.RecordCompletionAsync(recordId, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Server stop (Hangfire requeues the job) or job deleted: not a failure (JOB-011).
+            // The job's token is already cancelled, so the recorder gets None.
+            await executionRecorder.RecordInterruptedAsync(recordId, CancellationToken.None);
+            throw;
+        }
         catch (Exception ex)
         {
-            await executionRecorder.RecordFailureAsync(recordId, ex.ToString(), cancellationToken);
+            // None: the token may be cancelled (another exception during a stop); the failure must still be recorded.
+            await executionRecorder.RecordFailureAsync(recordId, ex.ToString(), CancellationToken.None);
             throw;
         }
     }
