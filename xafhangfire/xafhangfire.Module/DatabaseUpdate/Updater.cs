@@ -4,7 +4,9 @@ using DevExpress.ExpressApp.EF;
 using DevExpress.ExpressApp.Security;
 using DevExpress.ExpressApp.SystemModule;
 using DevExpress.ExpressApp.Updating;
+using System.Security.Cryptography;
 using DevExpress.Persistent.Base;
+using DevExpress.Persistent.Base.Security;
 using DevExpress.Persistent.BaseImpl.EF;
 using DevExpress.Persistent.BaseImpl.EF.PermissionPolicy;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,7 +38,6 @@ namespace xafhangfire.Module.DatabaseUpdate
             // If a role doesn't exist in the database, create this role
             var defaultRole = CreateDefaultRole();
             var adminRole = CreateAdminRole();
-            var backgroundJobsRole = CreateBackgroundJobsRole();
 
             ObjectSpace.CommitChanges(); //This line persists created object(s).
 
@@ -66,16 +67,6 @@ namespace xafhangfire.Module.DatabaseUpdate
                 });
             }
 
-            // Service user for background Hangfire jobs (read-only access)
-            if (userManager.FindUserByName<ApplicationUser>(ObjectSpace, "HangfireJob") == null)
-            {
-                string EmptyPassword = "";
-                _ = userManager.CreateUser<ApplicationUser>(ObjectSpace, "HangfireJob", EmptyPassword, (user) =>
-                {
-                    user.Roles.Add(backgroundJobsRole);
-                });
-            }
-
             ObjectSpace.CommitChanges(); //This line persists created object(s).
 
             SeedJobDefinitions();
@@ -87,6 +78,9 @@ namespace xafhangfire.Module.DatabaseUpdate
             SeedEmailTemplates();
             ObjectSpace.CommitChanges();
 #endif
+            // Background jobs need their service user in every build configuration.
+            EnsureBackgroundJobsServiceUser();
+
             // Always refresh predefined reports so DB stays in sync with code changes.
             // This Updater runs before PredefinedReportsUpdater, which recreates any missing reports.
             RefreshPredefinedReports();
@@ -411,6 +405,37 @@ namespace xafhangfire.Module.DatabaseUpdate
                 ObjectSpace.Delete(report);
             }
         }
+
+        // Service user for background Hangfire jobs (read-only access).
+        // XafJobScopeInitializer signs it in without a password, so the password only has to be
+        // unguessable: an empty one let anyone log in as HangfireJob and get a JWT (AUTH-002).
+        void EnsureBackgroundJobsServiceUser()
+        {
+            var backgroundJobsRole = CreateBackgroundJobsRole();
+            ObjectSpace.CommitChanges();
+
+            var userManager = ObjectSpace.ServiceProvider.GetRequiredService<UserManager>();
+            var user = userManager.FindUserByName<ApplicationUser>(ObjectSpace, "HangfireJob");
+            if (user == null)
+            {
+                _ = userManager.CreateUser<ApplicationUser>(ObjectSpace, "HangfireJob", RandomPassword(), u =>
+                {
+                    u.Roles.Add(backgroundJobsRole);
+                });
+            }
+            else
+            {
+                // Databases seeded before the fix still carry the empty password.
+                if (((IAuthenticationStandardUser)user).ComparePassword(string.Empty))
+                    user.SetPassword(RandomPassword());
+                if (!user.Roles.Any(r => r.Name == backgroundJobsRole.Name))
+                    user.Roles.Add(backgroundJobsRole);
+            }
+
+            ObjectSpace.CommitChanges();
+        }
+
+        static string RandomPassword() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
 
         PermissionPolicyRole CreateBackgroundJobsRole()
         {
