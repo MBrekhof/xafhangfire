@@ -1,0 +1,341 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "xafhangfire: XAF jobs with a pluggable dispatcher",
+    "output": "architecture.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "admin",
+      "type": "external",
+      "label": "Admin",
+      "sublabel": "browser",
+      "pos": [
+        40,
+        200
+      ],
+      "size": [
+        120,
+        60
+      ]
+    },
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "XAF Blazor UI",
+      "sublabel": "JobDefinition, Run Now",
+      "pos": [
+        240,
+        200
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "dispatch",
+      "type": "backend",
+      "label": "JobDispatchService",
+      "sublabel": "IJobDispatcher",
+      "pos": [
+        460,
+        200
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "direct",
+      "type": "backend",
+      "label": "Direct dispatcher",
+      "sublabel": "inline, development",
+      "pos": [
+        680,
+        80
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "hangfire",
+      "type": "messagebus",
+      "label": "Hangfire",
+      "sublabel": "queue + cron, production",
+      "pos": [
+        680,
+        320
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "executor",
+      "type": "backend",
+      "label": "JobExecutor<T>",
+      "sublabel": "run history, progress",
+      "pos": [
+        900,
+        200
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "reports",
+      "type": "backend",
+      "label": "Report handler",
+      "sublabel": "XtraReport to PDF/XLSX",
+      "pos": [
+        1120,
+        100
+      ],
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "id": "email",
+      "type": "backend",
+      "label": "Email handler",
+      "sublabel": "MailKit, mail merge",
+      "pos": [
+        1120,
+        300
+      ],
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "id": "smtp",
+      "type": "external",
+      "label": "SMTP server",
+      "sublabel": "outgoing mail",
+      "pos": [
+        1340,
+        300
+      ],
+      "size": [
+        130,
+        60
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "PostgreSQL 16",
+      "sublabel": "app tables + Hangfire",
+      "pos": [
+        680,
+        480
+      ],
+      "size": [
+        150,
+        60
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Blazor Server process",
+      "wraps": [
+        "ui",
+        "dispatch",
+        "direct",
+        "hangfire",
+        "executor",
+        "reports",
+        "email"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Docker",
+      "wraps": [
+        "db"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "admin-ui",
+      "from": "admin",
+      "to": "ui",
+      "label": "HTTPS",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "ui-dispatch",
+      "from": "ui",
+      "to": "dispatch",
+      "label": "command",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "dispatch-direct",
+      "from": "dispatch",
+      "to": "direct",
+      "label": "UseHangfire=false",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "left",
+      "via": [
+        [
+          535,
+          110
+        ]
+      ]
+    },
+    {
+      "id": "dispatch-hangfire",
+      "from": "dispatch",
+      "to": "hangfire",
+      "label": "UseHangfire=true",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "via": [
+        [
+          535,
+          350
+        ]
+      ]
+    },
+    {
+      "id": "direct-executor",
+      "from": "direct",
+      "to": "executor",
+      "fromSide": "right",
+      "toSide": "top",
+      "via": [
+        [
+          975,
+          110
+        ]
+      ]
+    },
+    {
+      "id": "hangfire-executor",
+      "from": "hangfire",
+      "to": "executor",
+      "label": "worker",
+      "fromSide": "right",
+      "toSide": "bottom",
+      "via": [
+        [
+          975,
+          350
+        ]
+      ]
+    },
+    {
+      "id": "executor-reports",
+      "from": "executor",
+      "to": "reports",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          1085,
+          230
+        ],
+        [
+          1085,
+          130
+        ]
+      ]
+    },
+    {
+      "id": "executor-email",
+      "from": "executor",
+      "to": "email",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          1085,
+          230
+        ],
+        [
+          1085,
+          330
+        ]
+      ]
+    },
+    {
+      "id": "email-smtp",
+      "from": "email",
+      "to": "smtp",
+      "label": "SMTP",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "hangfire-db",
+      "from": "hangfire",
+      "to": "db",
+      "label": "job storage",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "ui-db",
+      "from": "ui",
+      "to": "db",
+      "label": "EF Core",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "via": [
+        [
+          315,
+          510
+        ]
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "One command, two dispatchers",
+      "items": [
+        "Jobs are command records with an IJobHandler<T>",
+        "Jobs:UseHangfire picks inline or queued execution"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Admin-configured jobs",
+      "items": [
+        "JobDefinition holds type, parameters and cron",
+        "Every run is recorded with status and duration"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Secured background work",
+      "items": [
+        "Workers sign in as the HangfireJob user",
+        "Dashboard limited to Administrators"
+      ]
+    }
+  ]
+}

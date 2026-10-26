@@ -2,6 +2,13 @@
 
 DevExpress XAF application with a pluggable job dispatcher architecture for background task execution via Hangfire.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/architecture-dark.png">
+  <img alt="Architecture: Admin to XAF Blazor UI to JobDispatchService, which runs jobs inline (development) or through Hangfire (production) into JobExecutor, the report and email handlers, and PostgreSQL" src="docs/images/architecture-light.png">
+</picture>
+
+<sub>Diagram source: <code>docs/images/architecture.archify.json</code> (rendered with Archify).</sub>
+
 ## Overview
 
 This project demonstrates a **Command/Handler + Pluggable Dispatcher** pattern that separates job business logic from execution strategy. Jobs can run inline (for local development/debugging) or be queued through Hangfire (for production), toggled by configuration.
