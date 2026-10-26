@@ -33,23 +33,12 @@
 **Session 15 (2026-02-22):** Typed report parameter fields. Replaced generic key-value text editor with individual typed fields for report parameters: date pickers (`<input type="date">`), decimal spin edits (`DxSpinEdit<decimal>`), entity lookups (`DxComboBox` with DB-backed dropdown). Created `ContactListByOrgReportParameters` (ReportParametersObjectBase with Organization lookup + GetCriteria). Added `FilterString` to ContactListByOrgReport so job dispatcher can pass Organization Guid. Removed `[DomainComponent]` from all 7 EF Core entities (was incorrect — only for non-persistent objects). Added entity type detection via `[Key]` attribute and display text via `[DefaultProperty]`. Grouped field serialization into nested JSON dicts. Build clean, all 70 tests pass.
 
 ## FINDINGS
-- [ ] Hangfire recurring job IDs collide per command type (Schedule uses `typeof(TCommand).Name`), so multiple JobDefinitions of same type overwrite each other. See `xafhangfire.Jobs/HangfireJobDispatcher.cs` and `xafhangfire.Blazor.Server/Services/JobSyncService.cs`. (ID: 2554)
-- [ ] Execution records probably don't link to JobDefinition because recorder matches `JobDefinition.Name` but executor passes `commandType` as job name. See `xafhangfire.Jobs/JobExecutor.cs` and `xafhangfire.Blazor.Server/Services/XafJobExecutionRecorder.cs`. (ID: 2555)
-- [ ] Disabled/deleted JobDefinitions do not remove existing Hangfire recurring jobs (sync only adds on startup). See `xafhangfire.Blazor.Server/Services/JobSyncService.cs`. (ID: 2556)
 - [x] `JobTestController` is `[AllowAnonymous]` and can enqueue jobs in production unless gated. See `xafhangfire.Blazor.Server/API/Jobs/JobTestController.cs`. Fixed in `1f795e3` (`[Authorize]` + test).
-- [ ] Report export/email output path collisions under concurrency (deterministic `{ReportName}.{ext}` paths). See `xafhangfire.Blazor.Server/Handlers/GenerateReportHandler.cs` and `xafhangfire.Blazor.Server/Handlers/SendReportEmailHandler.cs`. (ID: 2557)
-- [ ] Parameter editor must not rewrite ParametersJson on load (umbrella for the serialization family) (ID: 2567)
-- [ ] Blank json job parameter serializes as "" and breaks command deserialization (ID: 2564)
-- [ ] Parameter editor wipes relative date terms ("last-month") on load (ID: 2565)
-- [ ] Empty Organization lookup breaks Contact List report filter (ID: 2566)
-- [ ] HangfireJob service user has an empty password; not seeded at all in Release builds (ID: 2568)
-- [ ] RunNow overwrites the finished status with Running in Direct mode (ID: 2570)
-- [ ] Clearing ReportName turns the old report's parameters into key/value rows (ID: 2573)
-- [ ] Decimal report parameters are parsed with the server culture (ID: 2574)
-- [ ] A previous failure's message stays visible while the job runs again (ID: 2575)
-- [ ] Batch-1 tests that passed against the old code (ID: 2576)
-- [ ] Parameter form loop has no @key and the term select has no bound value (unverified) (ID: 2577)
+- [ ] Parameter form loop has no @key and the date-term dropdown has no bound value (unverified) (ID: 2577)
 - [ ] Run Now in the WinForms app fails because JobDispatchService isn't registered there (unverified) (ID: 2578)
+- [ ] Jobs interrupted by an app crash/restart resume only after 30 minutes (ID: 2579)
+- [ ] Vulnerable transitive packages: MessagePack 3.1.4, System.Security.Cryptography.Xml/Pkcs 8.0.x (ID: 2581)
+- [ ] Hangfire retries count toward the failure-alert threshold (ID: 2582)
 
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
