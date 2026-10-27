@@ -232,8 +232,15 @@ namespace xafhangfire.Blazor.Server
 
                 if (!string.IsNullOrEmpty(hangfireConnectionString))
                 {
-                    config.UsePostgreSqlStorage(options =>
-                        options.UseNpgsqlConnection(hangfireConnectionString));
+                    config.UsePostgreSqlStorage(
+                        options => options.UseNpgsqlConnection(hangfireConnectionString),
+                        new PostgreSqlStorageOptions
+                        {
+                            // JOB-008: a crashed worker's jobs are picked up again after 5 minutes, not 30. Sliding
+                            // keeps refreshing fetchedat for jobs still running, so a long job isn't handed out twice.
+                            UseSlidingInvisibilityTimeout = true,
+                            InvisibilityTimeout = TimeSpan.FromMinutes(5),
+                        });
                 }
                 else
                 {

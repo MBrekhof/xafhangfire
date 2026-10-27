@@ -12,18 +12,21 @@ namespace xafhangfire.Jobs.Tests.Integration;
 [Collection("Postgres")]
 public class HangfireQueueTests(PostgresDatabase db)
 {
+    private static int _longJobRuns;
+
     public static void Noop() { }
+
+    public static void LongJob()
+    {
+        // Count on entry: a second worker's run is still sleeping when the first one finishes.
+        Interlocked.Increment(ref _longJobRuns);
+        Thread.Sleep(TimeSpan.FromSeconds(8));
+    }
 
     [PostgresFact]
     public void FinishedJob_LeavesTheQueue()
     {
-        _ = db; // the fixture created the database
-        // The legacy switch read fetchedat in this machine's zone and wrote it back in the session's zone, so the bug
-        // only shows when the two offsets differ: pin a session zone that differs from this machine's.
-        var sessionZone = TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow) == TimeSpan.Zero ? "Etc/GMT-2" : "UTC";
-        var options = new PostgreSqlStorageOptions { QueuePollInterval = TimeSpan.FromMilliseconds(200) };
-        var storage = new PostgreSqlStorage(
-            new NpgsqlConnectionFactory($"{PostgresDatabase.ConnectionString};Timezone={sessionZone}", options), options);
+        var storage = Storage(new PostgreSqlStorageOptions { QueuePollInterval = TimeSpan.FromMilliseconds(200) });
 
         var jobId = new BackgroundJobClient(storage).Enqueue(() => Noop());
         var id = long.Parse(jobId);
@@ -37,6 +40,47 @@ public class HangfireQueueTests(PostgresDatabase db)
             WaitUntil(() => QueueRows(id) == 0, TimeSpan.FromSeconds(10))
                 .Should().BeTrue($"job {jobId} succeeded but its hangfire.jobqueue row is still there (JOB-013)");
         }
+    }
+
+    // JOB-008: the keep-alive must match its own fetchedat round trip, or a job longer than the invisibility timeout
+    // is handed to a second worker. 3 s timeout vs an 8 s job: without a working keep-alive it runs twice.
+    [PostgresFact]
+    public void SlidingTimeout_LongJobRunsOnce()
+    {
+        var storage = Storage(new PostgreSqlStorageOptions
+        {
+            QueuePollInterval = TimeSpan.FromMilliseconds(200),
+            UseSlidingInvisibilityTimeout = true,
+            InvisibilityTimeout = TimeSpan.FromSeconds(3),
+        });
+        Interlocked.Exchange(ref _longJobRuns, 0);
+
+        var jobId = new BackgroundJobClient(storage).Enqueue(() => LongJob());
+        var id = long.Parse(jobId);
+
+        using (new BackgroundJobServer(new BackgroundJobServerOptions { WorkerCount = 2, ServerName = "JOB-008" }, storage))
+        {
+            string? state = null;
+            WaitUntil(() => (state = StateOf(storage, jobId)) == "Succeeded", TimeSpan.FromSeconds(30))
+                .Should().BeTrue($"job {jobId} should succeed (last state: {state})");
+            WaitUntil(() => QueueRows(id) == 0, TimeSpan.FromSeconds(10))
+                .Should().BeTrue($"job {jobId} succeeded but its hangfire.jobqueue row is still there");
+        } // Dispose waits for every worker, so a second run has been counted by now.
+
+        _longJobRuns.Should().Be(1, "the keep-alive should keep the second worker from fetching the running job");
+    }
+
+    private PostgreSqlStorage Storage(PostgreSqlStorageOptions options)
+    {
+        _ = db; // the fixture created the database
+        // The legacy switch read fetchedat in this machine's zone and wrote it back in the session's zone, so the bug
+        // only shows when the two offsets differ: pin a session zone that differs from this machine's.
+        var sessionZone = TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow) == TimeSpan.Zero ? "Etc/GMT-2" : "UTC";
+        var storage = new PostgreSqlStorage(
+            new NpgsqlConnectionFactory($"{PostgresDatabase.ConnectionString};Timezone={sessionZone}", options), options);
+        // The constructor installs the schema; clear rows a failed earlier test may have left for this server to fetch.
+        PostgresDatabase.Scalar("delete from hangfire.jobqueue");
+        return storage;
     }
 
     private static string? StateOf(JobStorage storage, string jobId)
