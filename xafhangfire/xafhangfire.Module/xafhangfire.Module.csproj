@@ -46,6 +46,9 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.14" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="10.0.14" />
+    <!-- SEC-001: EntityFrameworkCore.SqlServer -> Microsoft.Data.SqlClient 6.1.7 pulls in vulnerable Pkcs 9.0.11
+         (fixed in 10.0.13). Drop when a SqlClient update moves it, or with the SqlServer design-time workaround. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14">
       <PrivateAssets>none</PrivateAssets>
       <IncludeAssets>all</IncludeAssets>
