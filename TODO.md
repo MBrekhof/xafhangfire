@@ -34,10 +34,8 @@
 
 ## FINDINGS
 - [x] `JobTestController` is `[AllowAnonymous]` and can enqueue jobs in production unless gated. See `xafhangfire.Blazor.Server/API/Jobs/JobTestController.cs`. Fixed in `1f795e3` (`[Authorize]` + test).
-- [ ] Run Now in the WinForms app fails because JobDispatchService isn't registered there (unverified) (ID: 2578)
 - [ ] Jobs interrupted by an app crash/restart resume only after 30 minutes (ID: 2579)
 - [ ] Vulnerable transitive packages: MessagePack 3.1.4, System.Security.Cryptography.Xml/Pkcs 8.0.x (ID: 2581)
-- [ ] The Win app does not set Npgsql.EnableLegacyTimestampBehavior (unverified) (ID: 2587)
 - [ ] Job definition editing in WinForms is degraded (unverified) (ID: 2588)
 - [ ] Run Now on a nested JobDefinition list would only save to the parent ObjectSpace (unverified) (ID: 2590)
 - [ ] Job handlers mishandle the job's CancellationToken (unverified) (ID: 2591)

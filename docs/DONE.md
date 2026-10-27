@@ -4,6 +4,8 @@
 - [x] UPG-001: Upgrade to .NET 10, DevExpress 26.1.6, EF Core 10, Npgsql 10. Done in `fb3a5dd`. (ID: 2586)
 - [x] JOB-013: Hangfire never deletes finished jobs from its queue. Fixed by UPG-001 in `fb3a5dd` (legacy timestamp switch dropped). (ID: 2589)
 - [x] UI-001: Scheduler calendar view of upcoming job runs. Done in `d186eb9`. (ID: 2559)
+- [x] WIN-001: The WinForms app didn't set the legacy timestamp switch. Fixed by UPG-001 in `fb3a5dd`; Martin confirmed in WinForms. (ID: 2587)
+- [x] UI-006: Run Now in the WinForms app failed (no dispatcher registered). Fixed in `9054573`; Martin confirmed in WinForms. (ID: 2578)
 
 ## 2026-10-26
 - [x] UI-005: Parameter form loop has no @key / date-term select unbound. Not reproduced (two Playwright scenarios), no code change. (ID: 2577)
