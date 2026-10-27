@@ -110,6 +110,9 @@ Toggle between direct (inline) and Hangfire execution:
 { "Jobs": { "UseHangfire": true } }    // production — async via Hangfire
 ```
 
+With Hangfire on PostgreSQL, jobs that were running when the app crashed or was killed are picked up again after
+5 minutes (sliding invisibility timeout); a graceful stop requeues them right away.
+
 ### Built-in Job Types
 
 | Command | Handler | Description |

@@ -73,7 +73,8 @@ Command/Handler + pluggable dispatcher. See `job-dispatcher-architecture.md` for
 
 - **Commands** as records in `Jobs/Commands/`, **Handlers** implement `IJobHandler<TCommand>` in `Jobs/Handlers/`
 - **IJobDispatcher** switches between `DirectJobDispatcher` (local dev, inline execution) and `HangfireJobDispatcher` (production, background queuing)
-- Toggled via `Jobs:UseHangfire` in appsettings (false in Development, true in Production)
+- Toggled via `Jobs:UseHangfire` in appsettings (currently true in both `appsettings.json` and `appsettings.Development.json`; set it false locally for inline, debuggable runs)
+- Hangfire.PostgreSql runs with a 5-minute sliding invisibility timeout (JOB-008, Startup.cs): jobs a crashed or killed app was running are picked up again 5 minutes after their last keep-alive, while running jobs refresh `fetchedat` every minute so they are never handed out twice
 - Hangfire dashboard at `/hangfire`, job test API at `/api/jobs/`
 - Register new handlers: `services.AddJobHandler<MyCommand, MyHandler>()` in Startup.cs
 
@@ -82,6 +83,10 @@ Command/Handler + pluggable dispatcher. See `job-dispatcher-architecture.md` for
 1. Create command record in `Jobs/Commands/` (e.g., `public record MyCommand(string Param);`)
 2. Create handler in `Jobs/Handlers/` implementing `IJobHandler<MyCommand>`
 3. Register in `Blazor.Server/Startup.cs`: `services.AddJobHandler<MyCommand, MyHandler>()`
+4. Let the job's cancellation propagate (JOB-014): a catch-all around awaited work needs
+   `when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)`, and a loop that swallows
+   per-item errors ends with `cancellationToken.ThrowIfCancellationRequested()`. A swallowed cancellation is recorded as
+   Success instead of interrupted. Don't leave half-written output files behind (see `GenerateReportHandler`).
 
 ### DevExpress 26.1 Gotchas
 
@@ -90,6 +95,13 @@ Command/Handler + pluggable dispatcher. See `job-dispatcher-architecture.md` for
 
 - `SizeAttribute` was removed. Use `FieldSizeAttribute` from `DevExpress.ExpressApp.DC` with `FieldSizeAttribute.Unlimited`.
 - **Model Editor + PostgreSQL:** XAF's `DesignTimeDbContextCreator` defaults to SQL Server (`EFCoreMsSqlProviderReflectionHelper`) regardless of the `EFCoreProvider=PostgreSql;` connection string prefix. The Module project must reference `Microsoft.EntityFrameworkCore.SqlServer` as a design-time workaround — the Model Editor only loads type info and never actually connects to the database. The design-time factory uses `DesignTimeDbContextFactory<T>` (from `DevExpress.ExpressApp.EFCore.DesignTime`), not EF Core's raw `IDesignTimeDbContextFactory<T>`.
+  That package also pulls in `Microsoft.Data.SqlClient` → a vulnerable `System.Security.Cryptography.Pkcs`, so Module
+  pins Pkcs 10.0.14 (SEC-001); drop the pin together with the workaround.
+- `Jobs.Tests` has a `FrameworkReference` to `Microsoft.AspNetCore.App` (SEC-001): it runs Blazor.Server code, and the
+  reference lets NuGet prune packages the framework ships (a vulnerable `System.Security.Cryptography.Xml`). Don't add
+  `Microsoft.Extensions.*` PackageReferences there (NU1510).
+- A `NullReferenceException` at `MainPageBase.get_Application` / `OnAfterRenderAsync` in the log is DevExpress-internal
+  noise when a page is left mid-render (UPG-002, closed by-design); nothing user-visible.
 
 ### Security Model
 

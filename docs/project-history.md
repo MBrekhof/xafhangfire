@@ -35,6 +35,13 @@ this file keeps the prose: session log, architecture decisions and gotchas.
 
 **Session 15 (2026-02-22):** Typed report parameter fields. Replaced generic key-value text editor with individual typed fields for report parameters: date pickers (`<input type="date">`), decimal spin edits (`DxSpinEdit<decimal>`), entity lookups (`DxComboBox` with DB-backed dropdown). Created `ContactListByOrgReportParameters` (ReportParametersObjectBase with Organization lookup + GetCriteria). Added `FilterString` to ContactListByOrgReport so job dispatcher can pass Organization Guid. Removed `[DomainComponent]` from all 7 EF Core entities (was incorrect — only for non-persistent objects). Added entity type detection via `[Key]` attribute and display text via `[DefaultProperty]`. Grouped field serialization into nested JSON dicts. Build clean, all 70 tests pass.
 
+**Since Session 15:** work is tracked per card on ContextBoard; each Done card's conclusion names its commits.
+
+**2026-10-27:** Repo migrated to board-only task state (`4624f32`). JOB-008: 5-minute sliding invisibility timeout,
+interrupted jobs resume in ~5 min instead of 30 (`8baf8ad`). SEC-001: vulnerable transitive crypto packages removed,
+scan clean (`94d4808`). JOB-014: cancelled mail-merge and report jobs end cancelled and leave no partial files
+(`1e8dae0`). UPG-002: DevExpress `MainPageBase` NullReferenceException closed as by-design log noise.
+
 ## FINDINGS
 - [x] `JobTestController` is `[AllowAnonymous]` and can enqueue jobs in production unless gated. See `xafhangfire.Blazor.Server/API/Jobs/JobTestController.cs`. Fixed in `1f795e3` (`[Authorize]` + test).
 
