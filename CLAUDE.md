@@ -29,6 +29,8 @@ dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfire.Blazor.Se
 dotnet test xafhangfire/xafhangfire.Jobs.Tests/xafhangfire.Jobs.Tests.csproj
 ```
 
+`Jobs.Tests/Integration/` (TEST-001) runs against the Docker Postgres in a throwaway `xafhangfire_inttest` database, dropped and recreated each run; without Postgres those tests report Skipped.
+
 Build configurations: Debug, Release, EasyTest.
 
 ## Architecture
