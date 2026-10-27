@@ -37,10 +37,8 @@
 - [ ] Run Now in the WinForms app fails because JobDispatchService isn't registered there (unverified) (ID: 2578)
 - [ ] Jobs interrupted by an app crash/restart resume only after 30 minutes (ID: 2579)
 - [ ] Vulnerable transitive packages: MessagePack 3.1.4, System.Security.Cryptography.Xml/Pkcs 8.0.x (ID: 2581)
-- [ ] Upgrade to .NET 10, DevExpress 26.1.6, EF Core 10, Npgsql 10 (ID: 2586)
 - [ ] The Win app does not set Npgsql.EnableLegacyTimestampBehavior (unverified) (ID: 2587)
 - [ ] Job definition editing in WinForms is degraded (unverified) (ID: 2588)
-- [ ] Hangfire never deletes finished jobs from its queue (legacy timestamps vs fetchedat) (ID: 2589)
 - [ ] Run Now on a nested JobDefinition list would only save to the parent ObjectSpace (unverified) (ID: 2590)
 - [ ] Job handlers mishandle the job's CancellationToken (unverified) (ID: 2591)
 
@@ -148,7 +146,6 @@
 - [x] LookupItem model class + "lookup" DxComboBox case in JobParametersForm.razor
 
 ## Future
-- [ ] Scheduler calendar view bound to JobDefinition (ID: 2559)
 - [ ] Expand test coverage (Blazor.Server handlers with mocked IReportExportService, integration tests) (ID: 2560)
 - [ ] Real-time progress UI (SignalR push of progress updates to XAF detail view) (ID: 2561)
 
