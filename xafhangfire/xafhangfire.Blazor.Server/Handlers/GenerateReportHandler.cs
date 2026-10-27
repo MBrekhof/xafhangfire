@@ -47,8 +47,22 @@ public sealed class GenerateReportHandler(
         };
 
         await using var stream = await reportExportService.ExportReportAsync(report, exportTarget);
-        await using var fileStream = File.Create(outputPath);
-        await stream.CopyToAsync(fileStream, cancellationToken);
+        // JOB-014: DX's export takes no token; check it before touching (and truncating) the output file.
+        cancellationToken.ThrowIfCancellationRequested();
+        var fileStream = File.Create(outputPath);
+        try
+        {
+            await using (fileStream)
+                await stream.CopyToAsync(fileStream, cancellationToken);
+        }
+        catch
+        {
+            // No file unless it was written completely. Best effort: a failed delete must not replace the
+            // original exception (a cancellation would then be recorded as a failure).
+            try { File.Delete(outputPath); }
+            catch (Exception ex) { logger.LogWarning(ex, "Could not delete partial report {Path}", outputPath); }
+            throw;
+        }
 
         logger.LogInformation("Report '{ReportName}' exported to {Path}",
             command.ReportName, outputPath);

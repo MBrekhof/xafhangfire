@@ -83,12 +83,16 @@ public sealed class SendMailMergeHandler(
                 await emailSender.SendAsync(email, subject, body, isHtml: true, cancellationToken: cancellationToken);
                 sent++;
             }
-            catch (Exception ex)
+            // JOB-014: the job's own cancellation propagates; anything else (a send timeout included) is one failed recipient.
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 logger.LogError(ex, "Failed to send mail merge email to '{Email}'", email);
                 failed++;
             }
         }
+
+        // A cancellation the sender wrapped or swallowed (MailKit does both) must still not end as a success.
+        cancellationToken.ThrowIfCancellationRequested();
 
         logger.LogInformation("Mail merge complete — Sent: {Sent}, Failed: {Failed}", sent, failed);
     }
