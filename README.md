@@ -240,4 +240,4 @@ See [docs/integration-guide.md](docs/integration-guide.md) for integrating this 
 
 ## Status
 
-See [TODO.md](TODO.md) for current progress and next steps.
+Open work is tracked on ContextBoard (project `xafhangfire`). Project history, architecture decisions and gotchas: [docs/project-history.md](docs/project-history.md).

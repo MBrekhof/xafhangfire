@@ -1,6 +1,9 @@
-# TODO — Job Dispatcher POC
+# Project history — Job Dispatcher POC
 
-## Current Status
+Formerly `TODO.md`. Open work lives on ContextBoard (project `xafhangfire`) since 2026-10-27 (board-only, SYNC-007);
+this file keeps the prose: session log, architecture decisions and gotchas.
+
+## Session log
 
 **Session 1 (2026-02-18):** All 3 phases + follow-up items 1-3 implemented. Solution builds clean. RunNow action dispatches real jobs. 3 sample JobDefinitions seeded. Recurring jobs sync to Hangfire on startup. Manually verified working.
 
@@ -34,11 +37,6 @@
 
 ## FINDINGS
 - [x] `JobTestController` is `[AllowAnonymous]` and can enqueue jobs in production unless gated. See `xafhangfire.Blazor.Server/API/Jobs/JobTestController.cs`. Fixed in `1f795e3` (`[Authorize]` + test).
-- [ ] Jobs interrupted by an app crash/restart resume only after 30 minutes (ID: 2579)
-- [ ] Vulnerable transitive packages: MessagePack 3.1.4, System.Security.Cryptography.Xml/Pkcs 8.0.x (ID: 2581)
-- [ ] Job definition editing in WinForms is degraded (unverified) (ID: 2588)
-- [ ] Run Now on a nested JobDefinition list would only save to the parent ObjectSpace (unverified) (ID: 2590)
-- [ ] Job handlers mishandle the job's CancellationToken (unverified) (ID: 2591)
 
 ## Completed
 - [x] `xafhangfire.Jobs` class library (IJobHandler, IJobDispatcher, DirectJobDispatcher, HangfireJobDispatcher, JobExecutor)
@@ -143,9 +141,6 @@
 - [x] Visual group headers in parameter form (FormatGroupName helper)
 - [x] LookupItem model class + "lookup" DxComboBox case in JobParametersForm.razor
 
-## Future
-- [ ] Real-time progress UI (SignalR push of progress updates to XAF detail view) (ID: 2561)
-
 ## Architecture Decisions
 - Hangfire stays **embedded in Blazor.Server** (no separate service). Split later if needed.
 - Handlers in `xafhangfire.Jobs` are shared — a future standalone worker just references the same project.
@@ -168,7 +163,7 @@
 
 When resuming this project, read these files first:
 1. `CLAUDE.md` — project conventions and build commands
-2. `TODO.md` — current progress (this file)
+2. ContextBoard project `xafhangfire` — open work (`list_cards`); this file for history
 3. `docs/plans/2026-02-18-job-dispatcher-design.md` — approved design
 4. `job-dispatcher-architecture.md` — original architecture reference
 5. `xafhangfire/xafhangfire.Jobs/` — all files (interfaces, dispatchers, handlers, JobDispatchService, DateRangeResolver)
@@ -214,7 +209,7 @@ When resuming this project, read these files first:
 43. `xafhangfire/xafhangfire.Module/Reports/ProjectStatusReportParameters.cs` — ReportParametersObjectBase descendant for Project Status Report
 44. `xafhangfire/xafhangfire.Module/Reports/ContactListByOrgReportParameters.cs` — ReportParametersObjectBase descendant for Contact List by Organization (Organization lookup)
 
-Then check the TODO list above to see what's done and what's next.
+Then check the board to see what's next.
 
 Start PostgreSQL: `docker compose up -d` from repo root.
 Build: `dotnet build xafhangfire.slnx` from repo root.
@@ -263,7 +258,7 @@ DB update: `dotnet run --project xafhangfire/xafhangfire.Blazor.Server/xafhangfi
 - DevExpress packages pinned to 26.1.6 — update all 4 csproj files together.
 - Module project needs `Microsoft.EntityFrameworkCore.SqlServer` for Model Editor (design-time only).
 
-**Suggested next steps (see Future section above):**
+**Suggested next steps (as of Session 15; all since carded on the board):**
 - Scheduler calendar view bound to JobDefinition
 - Real-time progress UI via SignalR
 - Expand test coverage (Blazor.Server handlers, integration tests)
