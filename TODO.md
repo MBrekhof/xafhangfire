@@ -144,7 +144,6 @@
 - [x] LookupItem model class + "lookup" DxComboBox case in JobParametersForm.razor
 
 ## Future
-- [ ] Expand test coverage (Blazor.Server handlers with mocked IReportExportService, integration tests) (ID: 2560)
 - [ ] Real-time progress UI (SignalR push of progress updates to XAF detail view) (ID: 2561)
 
 ## Architecture Decisions

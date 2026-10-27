@@ -6,6 +6,7 @@
 - [x] UI-001: Scheduler calendar view of upcoming job runs. Done in `d186eb9`. (ID: 2559)
 - [x] WIN-001: The WinForms app didn't set the legacy timestamp switch. Fixed by UPG-001 in `fb3a5dd`; Martin confirmed in WinForms. (ID: 2587)
 - [x] UI-006: Run Now in the WinForms app failed (no dispatcher registered). Fixed in `9054573`; Martin confirmed in WinForms. (ID: 2578)
+- [x] TEST-001: Expand test coverage. Postgres integration tests (dates, Hangfire queue) in `a0c8d69`; handlers were already covered. (ID: 2560)
 
 ## 2026-10-26
 - [x] UI-005: Parameter form loop has no @key / date-term select unbound. Not reproduced (two Playwright scenarios), no code change. (ID: 2577)
