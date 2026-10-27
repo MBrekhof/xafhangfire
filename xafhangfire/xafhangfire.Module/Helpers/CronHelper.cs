@@ -47,6 +47,24 @@ namespace xafhangfire.Module.Helpers
             }
         }
 
+        // UI-001: runs in [fromUtc, toUtc), at most `cap`. Both bounds must be DateTimeKind.Utc (Cronos throws otherwise).
+        public static List<DateTime> GetRunsBetween(string cronExpression, DateTime fromUtc, DateTime toUtc, int cap)
+        {
+            if (string.IsNullOrWhiteSpace(cronExpression) || cap <= 0 || toUtc <= fromUtc)
+                return new List<DateTime>();
+
+            CronExpression expression;
+            try
+            {
+                expression = CronExpression.Parse(cronExpression);
+            }
+            catch (CronFormatException)
+            {
+                return new List<DateTime>();
+            }
+            return expression.GetOccurrences(fromUtc, toUtc, fromInclusive: true, toInclusive: false).Take(cap).ToList();
+        }
+
         public static string FormatNextRuns(string cronExpression, int count)
         {
             var runs = GetNextRuns(cronExpression, count);

@@ -106,6 +106,11 @@ namespace xafhangfire.Blazor.Server
                         options.UseConnectionString(connectionString);
                     })
                     .AddNonPersistent();
+                builder.ObjectSpaceProviders.Events.OnObjectSpaceCreated += context =>
+                {
+                    if (context.ObjectSpace is DevExpress.ExpressApp.NonPersistentObjectSpace nonPersistent)
+                        xafhangfire.Blazor.Server.Services.JobCalendar.Attach(nonPersistent, context.ServiceProvider);
+                };
                 builder.Security
                     .UseIntegratedMode(options =>
                     {

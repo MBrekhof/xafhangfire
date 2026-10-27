@@ -27,6 +27,7 @@ namespace xafhangfire.Blazor.Server
         }
         public xafhangfireBlazorModule()
         {
+            AdditionalExportedTypes.Add(typeof(Services.JobCalendarEntry));
         }
         public override IEnumerable<ModuleUpdater> GetModuleUpdaters(IObjectSpace objectSpace, Version versionFromDB)
         {

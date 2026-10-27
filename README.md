@@ -23,6 +23,7 @@ This project demonstrates a **Command/Handler + Pluggable Dispatcher** pattern t
 - **Failure tracking** — consecutive failure counter with configurable alert threshold
 - **Hangfire dashboard** — role-based access control (Administrators only in production)
 - **Cron visualization** — human-readable cron descriptions + next 5 scheduled run times
+- **Job calendar** — read-only scheduler view of upcoming runs of every enabled job (Blazor, Jobs → Job Calendar)
 - **Rich parameter UI** — dynamic typed form fields from command record reflection (replaces raw JSON)
 - **Admin UI** — XAF auto-generated CRUD views for JobDefinitions, templates, CRM entities
 - **Background auth** — HangfireJob service user for secured object space access
